@@ -1,0 +1,28 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2002
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F221DB48-3DA9-4033-AC26-AC0A8652C605}") = "YALP", "YALP.vcxproj", "{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Win32 = Debug|Win32
+		Release|Any CPU = Release|Any CPU
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Debug|Win32.Build.0 = Debug|Win32
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Release|Any CPU.ActiveCfg = Release|Win32
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Release|Win32.ActiveCfg = Release|Win32
+		{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7AB21584-7362-4B5B-BD21-A501920662DB}
+	EndGlobalSection
+EndGlobal

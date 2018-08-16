@@ -1,0 +1,309 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="lib\subhook\subhook.c">
+      <Filter>lib\subhook</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\sdk\amxplugin.cpp">
+      <Filter>lib\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="src\hooks.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\timers.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lapi.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lauxlib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lbaselib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lbitlib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lcode.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lcorolib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lctype.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ldblib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ldebug.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ldo.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ldump.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lfunc.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lgc.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\linit.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\liolib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\llex.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lmathlib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lmem.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\loadlib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lobject.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lopcodes.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\loslib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lparser.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lstate.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lstring.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lstrlib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ltable.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ltablib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\ltm.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lundump.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lutf8lib.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lvm.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\lua\lzio.c">
+      <Filter>lib\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="src\natives.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua_info.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua_api.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\amxutils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\subhook\subhook.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_linux.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_private.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_unix.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_windows.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_x86.h">
+      <Filter>lib\subhook</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\sdk\plugin.h">
+      <Filter>lib\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\sdk\plugincommon.h">
+      <Filter>lib\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\sdk\amx\amx.h">
+      <Filter>lib\sdk\amx</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\sdk\amx\getch.h">
+      <Filter>lib\sdk\amx</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\sdk\amx\sclinux.h">
+      <Filter>lib\sdk\amx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fixes\linux.h">
+      <Filter>src\fixes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hooks.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\main.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\natives.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\shared_id_set_pool.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\id_set_pool.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\linear_pool.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\optional.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\timers.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lapi.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lauxlib.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lcode.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lctype.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\ldebug.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\ldo.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lfunc.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lgc.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\llex.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\llimits.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lmem.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lobject.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lopcodes.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lparser.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lprefix.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lstate.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lstring.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\ltable.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\ltm.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lua.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lua.hpp">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\luaconf.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lualib.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lundump.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lvm.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\lua\lzio.h">
+      <Filter>lib\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua_info.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua_api.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\amxutils.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="YALP.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="lib">
+      <UniqueIdentifier>{3d6a091a-259f-4fe8-8bba-120286323d40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\sdk">
+      <UniqueIdentifier>{ea02da0c-7d5b-4184-a17e-c9362a2a0219}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\subhook">
+      <UniqueIdentifier>{d04663e9-3029-49cf-853e-feae3cd594d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\sdk\amx">
+      <UniqueIdentifier>{7516e3ab-581e-47dc-b112-f524e53b8c77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{1013b1a8-51b7-4b2c-aa29-cc2e6607954b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\fixes">
+      <UniqueIdentifier>{973f41a2-0716-4217-b2b2-ec5673be5f47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\utils">
+      <UniqueIdentifier>{470fb0f2-8ac6-4cf8-b645-a8820627a0a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\lua">
+      <UniqueIdentifier>{abd01d7f-1955-4c11-b3f6-2d6a36909315}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

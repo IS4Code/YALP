@@ -1,0 +1,9 @@
+LIBRARY	"YALP"
+
+EXPORTS
+	Supports
+	Load
+	Unload
+	AmxLoad
+	AmxUnload
+	ProcessTick

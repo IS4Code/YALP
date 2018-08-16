@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6B21A77F-6E43-43E2-954D-C00D2DBBE9FE}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>YALP</RootNamespace>
+    <ProjectName>YALP</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>bin\win32\Release\</OutDir>
+    <IntDir>obj\win32\Release\</IntDir>
+    <TargetName>YALP</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>D:\Program Files\Rockstar Games\GTA San Andreas\Samp server\0.3.7\plugins\</OutDir>
+    <IntDir>obj\win32\Debug\</IntDir>
+    <TargetName>YALP</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PreprocessorDefinitions>HAVE_STDINT_H;_CRT_SECURE_NO_WARNINGS;NDEBUG;SAMPGDK_AMALGAMATION;SUBHOOK_IMPLEMENTATION;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>include;lib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BOOST_ALL_NO_LIB;BOOST_CHRONO_HEADER_ONLY;_CRT_SECURE_NO_WARNINGS;NDEBUG;SAMPGDK_AMALGAMATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>include;lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ImportLibrary>bin\win32\Release\YALP.lib</ImportLibrary>
+      <ModuleDefinitionFile>YALP.def</ModuleDefinitionFile>
+      <OutputFile>$(ProjectDir)bin\win32\Release\YALP.dll</OutputFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;psapi.lib;winmm.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <PreprocessorDefinitions>HAVE_STDINT_H;_CRT_SECURE_NO_WARNINGS;SAMPGDK_AMALGAMATION;SUBHOOK_IMPLEMENTATION;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>include;lib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <ProgramDataBaseFileName>$(OutDir)YALP.pdb</ProgramDataBaseFileName>
+      <Optimization>Disabled</Optimization>
+      <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BOOST_ALL_NO_LIB;BOOST_CHRONO_HEADER_ONLY;_CRT_SECURE_NO_WARNINGS;SAMPGDK_AMALGAMATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>include;lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ImportLibrary>bin\win32\Debug\YALP.lib</ImportLibrary>
+      <ModuleDefinitionFile>YALP.def</ModuleDefinitionFile>
+      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
+      <OutputFile>D:\Program Files\Rockstar Games\GTA San Andreas\Samp server\0.3.7\plugins\YALP.dll</OutputFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="lib\lua\lapi.c" />
+    <ClCompile Include="lib\lua\lauxlib.c" />
+    <ClCompile Include="lib\lua\lbaselib.c" />
+    <ClCompile Include="lib\lua\lbitlib.c" />
+    <ClCompile Include="lib\lua\lcode.c" />
+    <ClCompile Include="lib\lua\lcorolib.c" />
+    <ClCompile Include="lib\lua\lctype.c" />
+    <ClCompile Include="lib\lua\ldblib.c" />
+    <ClCompile Include="lib\lua\ldebug.c" />
+    <ClCompile Include="lib\lua\ldo.c" />
+    <ClCompile Include="lib\lua\ldump.c" />
+    <ClCompile Include="lib\lua\lfunc.c" />
+    <ClCompile Include="lib\lua\lgc.c" />
+    <ClCompile Include="lib\lua\linit.c" />
+    <ClCompile Include="lib\lua\liolib.c" />
+    <ClCompile Include="lib\lua\llex.c" />
+    <ClCompile Include="lib\lua\lmathlib.c" />
+    <ClCompile Include="lib\lua\lmem.c" />
+    <ClCompile Include="lib\lua\loadlib.c" />
+    <ClCompile Include="lib\lua\lobject.c" />
+    <ClCompile Include="lib\lua\lopcodes.c" />
+    <ClCompile Include="lib\lua\loslib.c" />
+    <ClCompile Include="lib\lua\lparser.c" />
+    <ClCompile Include="lib\lua\lstate.c" />
+    <ClCompile Include="lib\lua\lstring.c" />
+    <ClCompile Include="lib\lua\lstrlib.c" />
+    <ClCompile Include="lib\lua\ltable.c" />
+    <ClCompile Include="lib\lua\ltablib.c" />
+    <ClCompile Include="lib\lua\ltm.c" />
+    <ClCompile Include="lib\lua\lundump.c" />
+    <ClCompile Include="lib\lua\lutf8lib.c" />
+    <ClCompile Include="lib\lua\lvm.c" />
+    <ClCompile Include="lib\lua\lzio.c" />
+    <ClCompile Include="lib\sdk\amxplugin.cpp" />
+    <ClCompile Include="lib\subhook\subhook.c" />
+    <ClCompile Include="src\amxutils.cpp" />
+    <ClCompile Include="src\hooks.cpp" />
+    <ClCompile Include="src\lua_info.cpp" />
+    <ClCompile Include="src\lua_api.cpp" />
+    <ClCompile Include="src\natives.cpp" />
+    <ClCompile Include="src\timers.cpp" />
+    <ClInclude Include="lib\lua\lapi.h" />
+    <ClInclude Include="lib\lua\lauxlib.h" />
+    <ClInclude Include="lib\lua\lcode.h" />
+    <ClInclude Include="lib\lua\lctype.h" />
+    <ClInclude Include="lib\lua\ldebug.h" />
+    <ClInclude Include="lib\lua\ldo.h" />
+    <ClInclude Include="lib\lua\lfunc.h" />
+    <ClInclude Include="lib\lua\lgc.h" />
+    <ClInclude Include="lib\lua\llex.h" />
+    <ClInclude Include="lib\lua\llimits.h" />
+    <ClInclude Include="lib\lua\lmem.h" />
+    <ClInclude Include="lib\lua\lobject.h" />
+    <ClInclude Include="lib\lua\lopcodes.h" />
+    <ClInclude Include="lib\lua\lparser.h" />
+    <ClInclude Include="lib\lua\lprefix.h" />
+    <ClInclude Include="lib\lua\lstate.h" />
+    <ClInclude Include="lib\lua\lstring.h" />
+    <ClInclude Include="lib\lua\ltable.h" />
+    <ClInclude Include="lib\lua\ltm.h" />
+    <ClInclude Include="lib\lua\lua.h" />
+    <ClInclude Include="lib\lua\lua.hpp" />
+    <ClInclude Include="lib\lua\luaconf.h" />
+    <ClInclude Include="lib\lua\lualib.h" />
+    <ClInclude Include="lib\lua\lundump.h" />
+    <ClInclude Include="lib\lua\lvm.h" />
+    <ClInclude Include="lib\lua\lzio.h" />
+    <ClInclude Include="lib\sdk\amx\amx.h" />
+    <ClInclude Include="lib\sdk\amx\getch.h" />
+    <ClInclude Include="lib\sdk\amx\sclinux.h" />
+    <ClInclude Include="lib\sdk\plugin.h" />
+    <ClInclude Include="lib\sdk\plugincommon.h" />
+    <ClInclude Include="lib\subhook\subhook_linux.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_unix.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_windows.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="lib\subhook\subhook_x86.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClCompile Include="src\main.cpp" />
+    <ClInclude Include="src\amxutils.h" />
+    <ClInclude Include="src\fixes\linux.h" />
+    <ClInclude Include="src\hooks.h" />
+    <ClInclude Include="src\lua_info.h" />
+    <ClInclude Include="src\lua_api.h" />
+    <ClInclude Include="src\main.h" />
+    <ClInclude Include="src\natives.h" />
+    <ClInclude Include="src\timers.h" />
+    <ClInclude Include="src\utils\optional.h" />
+    <ClInclude Include="src\utils\linear_pool.h" />
+    <ClInclude Include="src\utils\id_set_pool.h" />
+    <ClInclude Include="src\utils\shared_id_set_pool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="YALP.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\subhook\subhook.h" />
+    <ClInclude Include="lib\subhook\subhook_private.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
