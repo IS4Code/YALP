@@ -121,8 +121,10 @@ int lua::timer::loader(lua_State *L)
 	lua_pushvalue(L, -1);
 	lua_pushcclosure(L, settimer<register_timer>, 1);
 	lua_setfield(L, table, "ms");
+	lua_pushvalue(L, -1);
 	lua_pushcclosure(L, settimer<register_tick>, 1);
-	lua_setfield(L, table, "ticks");
+	lua_setfield(L, table, "tick");
+	luaL_ref(L, LUA_REGISTRYINDEX);
 
 	return 1;
 }
