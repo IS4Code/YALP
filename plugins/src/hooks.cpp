@@ -15,7 +15,8 @@ subhook_t amx_Init_h;
 subhook_t amx_Register_h;
 subhook_t amx_Exec_h;
 subhook_t amx_FindPublic_h;
-//subhook_t amx_PushString_h;
+subhook_t amx_GetPublic_h;
+subhook_t amx_NumPublics_h;
 
 int AMXAPI amx_InitOrig(AMX *amx, void *program)
 {
@@ -57,15 +58,25 @@ int AMXAPI amx_FindPublicOrig(AMX *amx, const char *funcname, int *index)
 	}
 }
 
-/*int AMXAPI amx_PushStringOrig(AMX *amx, cell *amx_addr, cell **phys_addr, const char *string, int pack, int use_wchar)
+int AMXAPI amx_GetPublicOrig(AMX *amx, int index, char *funcname)
 {
-	if(subhook_is_installed(amx_PushString_h))
+	if(subhook_is_installed(amx_GetPublic_h))
 	{
-		return reinterpret_cast<decltype(&amx_PushStringOrig)>(subhook_get_trampoline(amx_PushString_h))(amx, amx_addr, phys_addr, string, pack, use_wchar);
-	} else {
-		return amx_PushString(amx, amx_addr, phys_addr, string, pack, use_wchar);
+		return reinterpret_cast<decltype(&amx_GetPublicOrig)>(subhook_get_trampoline(amx_GetPublic_h))(amx, index, funcname);
+	}else{
+		return amx_GetPublic(amx, index, funcname);
 	}
-}*/
+}
+
+int AMXAPI amx_NumPublicsOrig(AMX *amx, int *number)
+{
+	if(subhook_is_installed(amx_NumPublics_h))
+	{
+		return reinterpret_cast<decltype(&amx_NumPublicsOrig)>(subhook_get_trampoline(amx_NumPublics_h))(amx, number);
+	}else{
+		return amx_NumPublics(amx, number);
+	}
+}
 
 namespace hooks
 {
@@ -106,14 +117,25 @@ namespace hooks
 		return ret;
 	}
 
-	/*int AMXAPI amx_PushString(AMX *amx, cell *amx_addr, cell **phys_addr, const char *string, int pack, int use_wchar)
+	int AMXAPI amx_GetPublic(AMX *amx, int index, char *funcname)
 	{
-		if(lua::interop::amx_push_string(amx, amx_addr, phys_addr, string, pack, use_wchar))
+		if(lua::interop::amx_get_public(amx, index, funcname))
 		{
 			return AMX_ERR_NONE;
 		}
-		return amx_PushStringOrig(amx, amx_addr, phys_addr, string, pack, use_wchar);
-	}*/
+
+		return amx_GetPublicOrig(amx, index, funcname);
+	}
+
+	int AMXAPI amx_NumPublics(AMX *amx, int *number)
+	{
+		if(lua::interop::amx_num_publics(amx, number))
+		{
+			return AMX_ERR_NONE;
+		}
+
+		return amx_NumPublicsOrig(amx, number);
+	}
 }
 
 template <class Func>
@@ -129,7 +151,8 @@ void hooks::load()
 	register_amx_hook(amx_Register_h, PLUGIN_AMX_EXPORT_Register, &hooks::amx_Register);
 	register_amx_hook(amx_Exec_h, PLUGIN_AMX_EXPORT_Exec, &hooks::amx_Exec);
 	register_amx_hook(amx_FindPublic_h, PLUGIN_AMX_EXPORT_FindPublic, &hooks::amx_FindPublic);
-	//register_amx_hook(amx_PushString_h, PLUGIN_AMX_EXPORT_PushString, &hooks::amx_PushString);
+	register_amx_hook(amx_GetPublic_h, PLUGIN_AMX_EXPORT_GetPublic, &hooks::amx_GetPublic);
+	register_amx_hook(amx_NumPublics_h, PLUGIN_AMX_EXPORT_NumPublics, &hooks::amx_NumPublics);
 }
 
 void unregister_hook(subhook_t hook)
@@ -144,5 +167,6 @@ void hooks::unload()
 	unregister_hook(amx_Register_h);
 	unregister_hook(amx_Exec_h);
 	unregister_hook(amx_FindPublic_h);
-	//unregister_hook(amx_PushString_h);
+	unregister_hook(amx_GetPublic_h);
+	unregister_hook(amx_NumPublics_h);
 }

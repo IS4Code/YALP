@@ -10,8 +10,9 @@ namespace lua
 	{
 		void init_public(lua_State *L, AMX *amx);
 		bool amx_find_public(AMX *amx, const char *funcname, int *index);
+		bool amx_get_public(AMX *amx, int index, char *funcname);
+		bool amx_num_publics(AMX *amx, int *number);
 		bool amx_exec(AMX *amx, cell *retval, int index, int &result);
-		//bool amx_push_string(AMX *amx, cell *amx_addr, cell **phys_addr, const char *string, int pack, int use_wchar);
 	}
 }
 
