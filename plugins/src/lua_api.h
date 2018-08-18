@@ -7,8 +7,6 @@
 namespace lua
 {
 	void init(lua_State *L);
-	bool getpublic(lua_State *L, const char *name);
-	bool getpublictable(lua_State *L);
 }
 
 #endif

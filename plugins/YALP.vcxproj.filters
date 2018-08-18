@@ -13,9 +13,6 @@
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\timers.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="lib\lua\lapi.c">
       <Filter>lib\lua</Filter>
     </ClCompile>
@@ -118,14 +115,38 @@
     <ClCompile Include="src\natives.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\lua_info.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\lua_api.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\amxutils.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua_utils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\amx\loader.cpp">
+      <Filter>src\amx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\timer.cpp">
+      <Filter>src\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop.cpp">
+      <Filter>src\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop\native.cpp">
+      <Filter>src\lua\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop\public.cpp">
+      <Filter>src\lua\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop\memory.cpp">
+      <Filter>src\lua\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop\string.cpp">
+      <Filter>src\lua\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lua\interop\result.cpp">
+      <Filter>src\lua\interop</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -185,9 +206,6 @@
     </ClInclude>
     <ClInclude Include="src\utils\optional.h">
       <Filter>src\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\timers.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="lib\lua\lapi.h">
       <Filter>lib\lua</Filter>
@@ -267,14 +285,38 @@
     <ClInclude Include="lib\lua\lzio.h">
       <Filter>lib\lua</Filter>
     </ClInclude>
-    <ClInclude Include="src\lua_info.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\lua_api.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\amxutils.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua_utils.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\amx\loader.h">
+      <Filter>src\amx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\timer.h">
+      <Filter>src\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop.h">
+      <Filter>src\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\native.h">
+      <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\public.h">
+      <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\memory.h">
+      <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\string.h">
+      <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\result.h">
+      <Filter>src\lua\interop</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -304,6 +346,15 @@
     </Filter>
     <Filter Include="lib\lua">
       <UniqueIdentifier>{abd01d7f-1955-4c11-b3f6-2d6a36909315}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\amx">
+      <UniqueIdentifier>{d682c4ee-957c-49aa-ae1c-6d01519b1479}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lua">
+      <UniqueIdentifier>{e9e9cdfb-0e46-453d-8029-7abc274bb4a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lua\interop">
+      <UniqueIdentifier>{fac941d1-b141-4cde-befa-8bb2283defbe}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -1,15 +1,15 @@
 #include "natives.h"
-#include "lua_info.h"
+#include "lua_api.h"
 #include <malloc.h>
 
 namespace Natives
 {
 	static cell AMX_NATIVE_CALL lua_newstate(AMX *amx, cell *params)
 	{
-		auto state = lua::newstate(1024);
+		auto state = luaL_newstate();
 		if(state)
 		{
-			luaL_openlibs(state);
+			lua::init(state);
 		}
 		return reinterpret_cast<cell>(state);
 	}
@@ -27,7 +27,8 @@ namespace Natives
 	static cell AMX_NATIVE_CALL lua_close(AMX *amx, cell *params)
 	{
 		auto state = reinterpret_cast<lua_State*>(params[1]);
-		return lua::close(state);
+		lua_close(state);
+		return 1;
 	}
 }
 
