@@ -20,7 +20,11 @@ struct amx_native_info
 
 	~amx_native_info()
 	{
-		amx_map.erase(amx);
+		if(amx)
+		{
+			amx_map.erase(amx);
+			amx = nullptr;
+		}
 	}
 };
 
@@ -102,6 +106,10 @@ int __call(lua_State *L)
 			{
 				value = reinterpret_cast<cell>(lua_touserdata(L, i));
 			}else{
+				if(lua_isnil(L, i) && paramcount == 0)
+				{
+					continue;
+				}
 				return luaL_argerror(L, i, "type not expected");
 			}
 				

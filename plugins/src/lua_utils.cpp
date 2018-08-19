@@ -1,7 +1,6 @@
 #include "lua_utils.h"
 #include "amxutils.h"
 #include "sdk/amx/amx.h"
-#include <string>
 
 int lua::amx_error(lua_State *L, int error)
 {
@@ -69,8 +68,17 @@ void *lua::checklightudata(lua_State *L, int idx)
 	{
 		return lua_touserdata(L, idx);
 	}
-	std::string errmsg("light userdata expected, got ");
-	errmsg.append(luaL_typename(L, idx));
-	luaL_argerror(L, idx, errmsg.c_str());
+	auto msg = lua_pushfstring(L, "light userdata expected, got %s", luaL_typename(L, idx));
+	luaL_argerror(L, idx, msg);
 	return nullptr;
+}
+
+const char *reader_func(lua_State *L, void *data, size_t *size)
+{
+	return (*reinterpret_cast<const lua::Reader*>(data))(L, size);
+}
+
+int lua::load(lua_State *L, const lua::Reader &reader, const char *chunkname, const char *mode)
+{
+	return lua_load(L, reader_func, const_cast<lua::Reader*>(&reader), chunkname, mode);
 }

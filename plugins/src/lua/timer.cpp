@@ -102,7 +102,7 @@ int settimer(lua_State *L)
 		{
 			lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
 			luaL_unref(L, LUA_REGISTRYINDEX, ref);
-			if(lua_pcall(L, 0, 0, 0) != 0)
+			if(lua_pcall(L, 0, 0, 0) != LUA_OK)
 			{
 				lua_pop(L, 1);
 			}

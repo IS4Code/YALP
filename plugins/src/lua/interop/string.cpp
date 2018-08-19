@@ -1,6 +1,5 @@
 #include "string.h"
 #include "lua_utils.h"
-#include <string>
 
 int getstring(lua_State *L)
 {

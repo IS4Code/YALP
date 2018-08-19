@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 #include <memory>
-#include <string>
 #include <cstring>
 
 static std::unordered_map<AMX*, std::weak_ptr<struct amx_tag_info>> amx_map;
@@ -23,7 +22,11 @@ struct amx_tag_info
 
 	~amx_tag_info()
 	{
-		amx_map.erase(amx);
+		if(amx)
+		{
+			amx_map.erase(amx);
+			amx = nullptr;
+		}
 	}
 };
 
@@ -70,10 +73,8 @@ int tagof(lua_State *L)
 	size_t maxlen = (size_t)lua_tointeger(L, lua_upvalueindex(2));
 	if(std::strlen(tagname) > maxlen)
 	{
-		std::string msg("tag name exceeds ");
-		msg.append(std::to_string(maxlen));
-		msg.append(" characters");
-		return luaL_argerror(L, 1, msg.c_str());
+		auto msg = lua_pushfstring(L, "tag name exceeds %d characters", maxlen);
+		return luaL_argerror(L, 1, msg);
 	}
 	lua_pushstring(L, tagname);
 	int index = luaL_ref(L, lua_upvalueindex(1));

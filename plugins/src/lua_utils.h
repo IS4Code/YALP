@@ -3,6 +3,7 @@
 
 #include "lua/lua.hpp"
 #include <type_traits>
+#include <functional>
 
 namespace lua
 {
@@ -94,6 +95,10 @@ namespace lua
 	size_t checkoffset(lua_State *L, int idx);
 
 	void *checklightudata(lua_State *L, int idx);
+
+	typedef std::function<const char*(lua_State *L, size_t *size)> Reader;
+
+	int load(lua_State *L, const lua::Reader &reader, const char *chunkname, const char *mode);
 }
 
 #endif

@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 #include <memory>
-#include <string>
 #include <cstring>
 
 static std::unordered_map<AMX*, std::weak_ptr<struct amx_public_info>> amx_map;
@@ -24,7 +23,11 @@ struct amx_public_info
 
 	~amx_public_info()
 	{
-		amx_map.erase(amx);
+		if(amx)
+		{
+			amx_map.erase(amx);
+			amx = nullptr;
+		}
 	}
 };
 
@@ -214,7 +217,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 						amx->stk += paramcount * sizeof(cell);
 						switch(lua_pcall(L, paramcount, 1, 0))
 						{
-							case 0:
+							case LUA_OK:
 								amx->error = AMX_ERR_NONE;
 								if(retval)
 								{
@@ -237,9 +240,11 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 								}
 								break;
 							case LUA_ERRMEM:
+								lua_pop(L, 1);
 								amx->error = AMX_ERR_MEMORY;
 								break;
 							default:
+								lua_pop(L, 1);
 								amx->error = AMX_ERR_GENERAL;
 								break;
 						}
