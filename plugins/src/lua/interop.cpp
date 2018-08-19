@@ -7,6 +7,7 @@
 #include "interop/memory.h"
 #include "interop/string.h"
 #include "interop/result.h"
+#include "interop/tags.h"
 
 #include <unordered_map>
 #include <string>
@@ -31,18 +32,19 @@ int lua::interop::loader(lua_State *L)
 	amx_info &info = lua::newuserdata<amx_info>(L);
 	info.fs_name = "?luafs_";
 	info.fs_name.append(std::to_string(reinterpret_cast<intptr_t>(&info)));
-	AMX *amx = amx::LoadNew(info.fs_name.c_str(), 1024, [&](AMX *amx, void *program)
+	AMX *amx = amx::LoadNew(info.fs_name.c_str(), 1024, sNAMEMAX, [&](AMX *amx, void *program)
 	{
 		info.amx = amx;
 		luaL_ref(L, LUA_REGISTRYINDEX);
 
-		lua_createtable(L, 0, 1);
+		lua_newtable(L);
 
 		init_native(L, amx);
 		init_public(L, amx);
 		init_memory(L, amx);
 		init_string(L, amx);
 		init_result(L, amx);
+		init_tags(L, amx);
 	});
 	if(!amx)
 	{

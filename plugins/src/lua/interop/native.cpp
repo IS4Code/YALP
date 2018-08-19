@@ -98,9 +98,6 @@ int __call(lua_State *L)
 					storage.push_back(std::make_tuple(addr, buf, len));
 				}
 				amx->hea += len;
-			}else if(lua_isnil(L, i))
-			{
-				value = 0;
 			}else if(lua_islightuserdata(L, i))
 			{
 				value = reinterpret_cast<cell>(lua_touserdata(L, i));

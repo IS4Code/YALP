@@ -11,7 +11,7 @@ namespace amx
 		bool Init(AMX *amx, void *program);
 	}
 	AMX *LoadProgram(const char *name, const char *program, std::function<void(AMX*, void*)> &&init);
-	AMX *LoadNew(const char *name, int32_t heapspace, std::function<void(AMX*, void*)> &&init);
+	AMX *LoadNew(const char *name, int32_t heapspace, uint16_t namelength, std::function<void(AMX*, void*)> &&init);
 	bool Unload(const char *name);
 }
 

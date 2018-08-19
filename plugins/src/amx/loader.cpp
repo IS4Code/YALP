@@ -43,15 +43,23 @@ AMX *amx::LoadProgram(const char *name, const char *program, std::function<void(
 	return nullptr;
 }
 
-AMX *amx::LoadNew(const char *name, int32_t heapspace, std::function<void(AMX*, void*)> &&init)
+struct AMX_FAKE_HEADER : public AMX_HEADER
 {
-	AMX_HEADER hdr{};
+	uint16_t namelength;
+};
+
+AMX *amx::LoadNew(const char *name, int32_t heapspace, uint16_t namelength, std::function<void(AMX*, void*)> &&init)
+{
+	AMX_FAKE_HEADER hdr{};
 	hdr.magic = AMX_MAGIC;
-	hdr.file_version = MIN_FILE_VERSION;
+	hdr.file_version = 7;
 	hdr.amx_version = MIN_AMX_VERSION;
-	hdr.dat = hdr.hea = hdr.size = sizeof(AMX_HEADER);
+	hdr.dat = hdr.hea = hdr.size = sizeof(hdr);
 	hdr.stp = hdr.hea + heapspace;
-	hdr.defsize = sizeof(AMX_FUNCSTUB);
+	hdr.defsize = sizeof(AMX_FUNCSTUBNT);
+	hdr.nametable = reinterpret_cast<unsigned char*>(&hdr.namelength) - reinterpret_cast<unsigned char*>(&hdr);
+	hdr.namelength = namelength;
+	hdr.publics = hdr.natives = hdr.libraries = hdr.pubvars = hdr.tags = hdr.nametable;
 	return LoadProgram(name, reinterpret_cast<char*>(&hdr), std::move(init));
 }
 

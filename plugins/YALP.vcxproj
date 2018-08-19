@@ -174,6 +174,7 @@
     <ClCompile Include="src\lua\interop\public.cpp" />
     <ClCompile Include="src\lua\interop\result.cpp" />
     <ClCompile Include="src\lua\interop\string.cpp" />
+    <ClCompile Include="src\lua\interop\tags.cpp" />
     <ClCompile Include="src\lua\timer.cpp" />
     <ClCompile Include="src\lua_api.cpp" />
     <ClCompile Include="src\lua_utils.cpp" />
@@ -238,6 +239,7 @@
     <ClInclude Include="src\lua\interop\public.h" />
     <ClInclude Include="src\lua\interop\result.h" />
     <ClInclude Include="src\lua\interop\string.h" />
+    <ClInclude Include="src\lua\interop\tags.h" />
     <ClInclude Include="src\lua\timer.h" />
     <ClInclude Include="src\lua_api.h" />
     <ClInclude Include="src\lua_utils.h" />
