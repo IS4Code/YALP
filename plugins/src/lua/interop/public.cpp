@@ -214,7 +214,13 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							cell value = stk[i];
 							lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
 						}
-						amx->stk += paramcount * sizeof(cell);
+						cell reset_stk = amx->stk + paramcount * sizeof(cell);
+						amx->stk -= 3 * sizeof(cell);
+						*--stk = paramcount * sizeof(cell);
+						*--stk = 0;
+						*--stk = 0;
+						amx->frm = amx->stk;
+
 						switch(lua_pcall(L, paramcount, 1, 0))
 						{
 							case LUA_OK:
@@ -248,6 +254,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 								amx->error = AMX_ERR_GENERAL;
 								break;
 						}
+						amx->stk = reset_stk;
 						lua_pop(L, 3);
 						result = amx->error;
 						return true;

@@ -7,7 +7,7 @@ static int custom_print(lua_State *L)
 	int n = lua_gettop(L);
 	lua_getglobal(L, "tostring");
 	int tostring = lua_absindex(L, -1);
-
+	
 	luaL_Buffer buf;
 	luaL_buffinit(L, &buf);
 	for(int i = 1; i <= n; i++)
