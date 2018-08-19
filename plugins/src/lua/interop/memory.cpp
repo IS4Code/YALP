@@ -43,9 +43,6 @@ int tobuffer(lua_State *L)
 	{
 		void *dst = lua_newuserdata(L, len);
 		std::memcpy(dst, src, len);
-	}else if(lua_isnil(L, 1))
-	{
-		lua::pushuserdata(L, (cell)0);
 	}else{
 		luaL_argerror(L, 1, "type not expected");
 		return 0;
@@ -76,7 +73,7 @@ int buffer_index(lua_State *L)
 	{
 		if(index >= 0 && index <= len - sizeof(cell))
 		{
-			lua_pushinteger(L, *reinterpret_cast<cell*>(ptr + index));
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(*reinterpret_cast<cell*>(ptr + index)));
 			return 1;
 		}
 		lua_pushnil(L);
@@ -88,7 +85,21 @@ int buffer_index(lua_State *L)
 int buffer_newindex(lua_State *L)
 {
 	size_t index = lua::checkoffset(L, 2);
-	auto value = luaL_checkinteger(L, 3);
+	cell value;
+	if(lua_isinteger(L, 3))
+	{
+		value = (cell)lua_tointeger(L, 3);
+	}else if(lua_isnumber(L, 3))
+	{
+		float num = (float)lua_tonumber(L, 3);
+		value = amx_ftoc(num);
+	}else if(lua_isboolean(L, 3))
+	{
+		value = (cell)lua_toboolean(L, 3);
+	}else{
+		luaL_argerror(L, 3, "type not expected");
+		return 0;
+	}
 	size_t len;
 	bool isconst;
 	if(auto ptr = reinterpret_cast<char*>(lua::tobuffer(L, 1, len, isconst)))
@@ -99,7 +110,7 @@ int buffer_newindex(lua_State *L)
 		}
 		if(index >= 0 && index <= len - sizeof(cell))
 		{
-			*reinterpret_cast<cell*>(ptr + index) = (cell)value;
+			*reinterpret_cast<cell*>(ptr + index) = value;
 		}
 	}
 	return 0;
