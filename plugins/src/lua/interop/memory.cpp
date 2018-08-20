@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstring>
 
+constexpr cell STKMARGIN = 16 * sizeof(cell);
+
 int newbuffer(lua_State *L)
 {
 	auto size = (size_t)luaL_checkinteger(L, 1) * sizeof(cell);
@@ -14,24 +16,24 @@ int newbuffer(lua_State *L)
 	return 1;
 }
 
-int tobuffer(lua_State *L)
+bool toblock(lua_State *L, int idx)
 {
 	size_t len;
 	bool isconst;
-	if(lua_isinteger(L, 1))
+	if(lua_isinteger(L, idx))
 	{
-		lua::pushuserdata(L, (cell)lua_tointeger(L, 1));
-	}else if(lua_isnumber(L, 1))
+		lua::pushuserdata(L, (cell)lua_tointeger(L, idx));
+	}else if(lua_isnumber(L, idx))
 	{
-		float num = (float)lua_tonumber(L, 1);
+		float num = (float)lua_tonumber(L, idx);
 		lua::pushuserdata(L, amx_ftoc(num));
-	}else if(lua_isboolean(L, 1))
+	}else if(lua_isboolean(L, idx))
 	{
-		lua::pushuserdata(L, (cell)lua_toboolean(L, 1));
-	}else if(lua_isstring(L, 1))
+		lua::pushuserdata(L, (cell)lua_toboolean(L, idx));
+	}else if(lua_isstring(L, idx))
 	{
 		size_t len;
-		auto str = lua_tolstring(L, 1, &len);
+		auto str = lua_tolstring(L, idx, &len);
 		len++;
 
 		auto addr = reinterpret_cast<cell*>(lua_newuserdata(L, len * sizeof(cell)));
@@ -39,11 +41,20 @@ int tobuffer(lua_State *L)
 		{
 			addr[i] = str[i];
 		}
-	}else if(auto src = lua::tobuffer(L, 1, len, isconst))
+	}else if(auto src = lua::tobuffer(L, idx, len, isconst))
 	{
 		void *dst = lua_newuserdata(L, len);
 		std::memcpy(dst, src, len);
 	}else{
+		return false;
+	}
+	return true;
+}
+
+int tobuffer(lua_State *L)
+{
+	if(!toblock(L, 1))
+	{
 		luaL_argerror(L, 1, "type not expected");
 		return 0;
 	}
@@ -71,7 +82,7 @@ int buffer_index(lua_State *L)
 	bool isconst;
 	if(auto ptr = reinterpret_cast<char*>(lua::tobuffer(L, 1, len, isconst)))
 	{
-		if(index >= 0 && index <= len - sizeof(cell))
+		if(index >= 0 && index + sizeof(cell) <= len)
 		{
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(*reinterpret_cast<cell*>(ptr + index)));
 			return 1;
@@ -108,7 +119,7 @@ int buffer_newindex(lua_State *L)
 		{
 			return luaL_error(L, "buffer is read-only");
 		}
-		if(index >= 0 && index <= len - sizeof(cell))
+		if(index >= 0 && index + sizeof(cell) <= len)
 		{
 			*reinterpret_cast<cell*>(ptr + index) = value;
 		}
@@ -151,6 +162,10 @@ int span_buf(lua_State *L)
 			lua_getfield(L, mt, "__ofs");
 			auto ofs = lua_tointeger(L, -1);
 			lua_pop(L, 1);
+			if(ofs > len)
+			{
+				ofs = len;
+			}
 			ptr += ofs;
 			len -= (size_t)ofs;
 
@@ -237,6 +252,71 @@ int span(lua_State *L)
 	return 1;
 }
 
+int heapalloc(lua_State *L)
+{
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto size = luaL_checkinteger(L, 1) * sizeof(cell);
+
+	if(amx->hea + size + STKMARGIN > amx->stk)
+	{
+		return lua::amx_error(L, AMX_ERR_STACKERR);
+	}
+	cell offset = amx->hea;
+	amx->hea += size;
+	auto hdr = (AMX_HEADER*)amx->base;
+	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+	std::memset(data + offset, 0, size);
+
+	lua_pushvalue(L, lua_upvalueindex(2));
+	lua_pushvalue(L, lua_upvalueindex(3));
+	lua_pushlightuserdata(L, reinterpret_cast<void*>(offset));
+	lua_pushinteger(L, size / sizeof(cell));
+	lua_call(L, 3, 1);
+	return 1;
+}
+
+int heapfree(lua_State *L)
+{
+	size_t length;
+	bool isconst;
+	auto buf = reinterpret_cast<unsigned char*>(lua::tobuffer(L, 1, length, isconst));
+	if(!buf)
+	{
+		return luaL_argerror(L, 1, "must be a buffer type");
+	}
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto hdr = (AMX_HEADER*)amx->base;
+	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+
+	if(buf >= data + amx->hlw && buf < data + amx->hea)
+	{
+		amx->hea = buf - data;
+		lua_pushboolean(L, true);
+		return 1;
+	}
+	lua_pushboolean(L, false);
+	return 1;
+}
+
+int toheap(lua_State *L)
+{
+	if(!toblock(L, 1))
+	{
+		luaL_argerror(L, 1, "type not expected");
+		return 0;
+	}
+	size_t len = lua_rawlen(L, -1);
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_pushinteger(L, len / sizeof(cell));
+	lua_call(L, 1, 1);
+	bool isconst;
+	if(auto buf = lua::tobuffer(L, -1, len, isconst))
+	{
+		std::memcpy(buf, lua_touserdata(L, -2), len);
+	}
+	return 1;
+}
+
 void lua::interop::init_memory(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -305,10 +385,23 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, table, "heap");
-
-
+	
 	lua_pushcfunction(L, span);
 	lua_setfield(L, table, "span");
+
+	lua_pushlightuserdata(L, amx);
+	lua_getfield(L, table, "span");
+	lua_getfield(L, table, "heap");
+	lua_pushcclosure(L, heapalloc, 3);
+	lua_setfield(L, table, "heapalloc");
+
+	lua_pushlightuserdata(L, amx);
+	lua_pushcclosure(L, heapfree, 1);
+	lua_setfield(L, table, "heapfree");
+
+	lua_getfield(L, table, "heapalloc");
+	lua_pushcclosure(L, toheap, 1);
+	lua_setfield(L, table, "toheap");
 
 	lua_settop(L, table);
 }
