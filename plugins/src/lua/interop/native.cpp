@@ -43,7 +43,7 @@ int __call(lua_State *L)
 		auto hdr = (AMX_HEADER*)amx->base;
 		auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
-		std::vector<std::tuple<void*, void*, size_t>> storage;
+		std::vector<cell> reset_addr;
 
 		bool castresult = false;
 		int paramcount = 0;
@@ -106,7 +106,10 @@ int __call(lua_State *L)
 					value = reinterpret_cast<unsigned char*>(buf) - data;
 					if(value < 0 || value >= amx->stp)
 					{
-						addr_set.insert(value);
+						if(addr_set.insert(value).second)
+						{
+							reset_addr.push_back(value);
+						}
 					}
 				}
 			}else if(lua_islightuserdata(L, i))
@@ -132,11 +135,9 @@ int __call(lua_State *L)
 		amx->error = 0;
 		cell result = native(amx, params);
 
-		addr_set.clear();
-
-		for(const auto &mem : storage)
+		for(const cell &value : reset_addr)
 		{
-			std::memcpy(std::get<1>(mem), std::get<0>(mem), std::get<2>(mem));
+			addr_set.erase(value);
 		}
 
 		amx->stk = stk;
