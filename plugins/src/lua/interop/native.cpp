@@ -150,16 +150,19 @@ int __call(lua_State *L)
 			return lua::amx_error(L, code);
 		}
 
-		if(castresult)
+		if(lua::numresults(L) != 0)
 		{
-			lua_pushvalue(L, 1);
+			if(castresult)
+			{
+				lua_pushvalue(L, 1);
+			}
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
+			if(castresult)
+			{
+				lua_call(L, 1, 1);
+			}
+			return 1;
 		}
-		lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
-		if(castresult)
-		{
-			lua_call(L, 1, 1);
-		}
-		return 1;
 	}
 	return 0;
 }

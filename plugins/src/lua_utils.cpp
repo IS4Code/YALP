@@ -1,6 +1,10 @@
 #include "lua_utils.h"
 #include "amxutils.h"
 #include "sdk/amx/amx.h"
+extern "C"
+{
+#include "lua/lstate.h"
+}
 
 int lua::amx_error(lua_State *L, int error)
 {
@@ -102,4 +106,10 @@ int lua::getfieldprotected(lua_State *L, int idx, const char *k)
 	lua_pushvalue(L, idx);
 	lua_pushlightuserdata(L, const_cast<char*>(k));
 	return lua_pcall(L, 2, 1, 0);
+}
+
+short lua::numresults(lua_State *L)
+{
+	if(!L->ci) return 0;
+	return L->ci->nresults;
 }

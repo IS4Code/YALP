@@ -103,6 +103,8 @@ namespace lua
 	void pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn);
 
 	int getfieldprotected(lua_State *L, int idx, const char *k);
+
+	short numresults(lua_State *L);
 }
 
 #endif
