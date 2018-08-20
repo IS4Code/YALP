@@ -2,6 +2,7 @@
 #include "hooks.h"
 #include "natives.h"
 #include "lua/timer.h"
+#include "lua/remote.h"
 
 #include "sdk/amx/amx.h"
 #include "sdk/plugincommon.h"
@@ -31,6 +32,7 @@ PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData)
 PLUGIN_EXPORT void PLUGIN_CALL Unload()
 {
 	lua::timer::close();
+	lua::remote::close();
 	hooks::unload();
 
 	logprintf(" YALP v0.1 unloaded");

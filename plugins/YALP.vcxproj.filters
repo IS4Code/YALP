@@ -151,6 +151,9 @@
     <ClCompile Include="src\lua\interop\tags.cpp">
       <Filter>src\lua\interop</Filter>
     </ClCompile>
+    <ClCompile Include="src\lua\remote.cpp">
+      <Filter>src\lua</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\subhook\subhook.h">
@@ -323,6 +326,9 @@
     </ClInclude>
     <ClInclude Include="src\lua\interop\tags.h">
       <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\remote.h">
+      <Filter>src\lua</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

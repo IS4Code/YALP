@@ -1,6 +1,7 @@
 #include "lua_api.h"
 #include "lua/timer.h"
 #include "lua/interop.h"
+#include "lua/remote.h"
 
 static int custom_print(lua_State *L)
 {
@@ -40,6 +41,9 @@ void lua::init(lua_State *L)
 
 		lua_pushcfunction(L, lua::interop::loader);
 		lua_setfield(L, -2, "interop");
+		
+		lua_pushcfunction(L, lua::remote::loader);
+		lua_setfield(L, -2, "remote");
 
 		lua_pop(L, 1);
 	}
