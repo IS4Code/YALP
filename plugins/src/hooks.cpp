@@ -21,6 +21,7 @@ subhook_t amx_NumPublics_h;
 subhook_t amx_FindTagId_h;
 subhook_t amx_GetTag_h;
 subhook_t amx_NumTags_h;
+subhook_t amx_GetAddr_h;
 
 int AMXAPI amx_InitOrig(AMX *amx, void *program)
 {
@@ -107,8 +108,18 @@ int AMXAPI amx_NumTagsOrig(AMX *amx, int *number)
 	if(subhook_is_installed(amx_NumTags_h))
 	{
 		return reinterpret_cast<decltype(&amx_NumTagsOrig)>(subhook_get_trampoline(amx_NumTags_h))(amx, number);
-	} else {
+	}else{
 		return amx_NumTags(amx, number);
+	}
+}
+
+int AMXAPI amx_GetAddrOrig(AMX *amx, cell amx_addr, cell **phys_addr)
+{
+	if(subhook_is_installed(amx_GetAddr_h))
+	{
+		return reinterpret_cast<decltype(&amx_GetAddrOrig)>(subhook_get_trampoline(amx_GetAddr_h))(amx, amx_addr, phys_addr);
+	}else{
+		return amx_GetAddr(amx, amx_addr, phys_addr);
 	}
 }
 
@@ -200,6 +211,16 @@ namespace hooks
 
 		return amx_NumTagsOrig(amx, number);
 	}
+
+	int AMXAPI amx_GetAddr(AMX *amx, cell amx_addr, cell **phys_addr)
+	{
+		if(lua::interop::amx_get_addr(amx, amx_addr, phys_addr))
+		{
+			return AMX_ERR_NONE;
+		}
+
+		return amx_GetAddrOrig(amx, amx_addr, phys_addr);
+	}
 }
 
 template <class Func>
@@ -220,6 +241,7 @@ void hooks::load()
 	register_amx_hook(amx_FindTagId_h, PLUGIN_AMX_EXPORT_FindTagId, &hooks::amx_FindTagId);
 	register_amx_hook(amx_GetTag_h, PLUGIN_AMX_EXPORT_GetTag, &hooks::amx_GetTag);
 	register_amx_hook(amx_NumTags_h, PLUGIN_AMX_EXPORT_NumTags, &hooks::amx_NumTags);
+	register_amx_hook(amx_GetAddr_h, PLUGIN_AMX_EXPORT_GetAddr, &hooks::amx_GetAddr);
 }
 
 void unregister_hook(subhook_t hook)
@@ -239,4 +261,5 @@ void hooks::unload()
 	unregister_hook(amx_FindTagId_h);
 	unregister_hook(amx_GetTag_h);
 	unregister_hook(amx_NumTags_h);
+	unregister_hook(amx_GetAddr_h);
 }

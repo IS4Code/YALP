@@ -2,11 +2,13 @@
 #include "lua_utils.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 
 constexpr cell STKMARGIN = 16 * sizeof(cell);
 
 static std::unordered_map<AMX*, std::weak_ptr<struct amx_native_info>> amx_map;
+static std::unordered_set<cell> addr_set;
 
 struct amx_native_info
 {
@@ -90,18 +92,23 @@ int __call(lua_State *L)
 				continue;
 			}else if(auto buf = lua::tobuffer(L, i, len, isconst))
 			{
-				if(amx->stk - amx->hea - len < STKMARGIN)
+				if(isconst)
 				{
-					return lua::amx_error(L, AMX_ERR_MEMORY);
+					if(amx->stk - amx->hea - len < STKMARGIN)
+					{
+						return lua::amx_error(L, AMX_ERR_MEMORY);
+					}
+					value = amx->hea;
+					auto addr = data + amx->hea;
+					std::memcpy(addr, buf, len);
+					amx->hea += len;
+				}else{
+					value = reinterpret_cast<unsigned char*>(buf) - data;
+					if(value < 0 || value >= amx->stp)
+					{
+						addr_set.insert(value);
+					}
 				}
-				value = amx->hea;
-				auto addr = data + amx->hea;
-				std::memcpy(addr, buf, len);
-				if(!isconst)
-				{
-					storage.push_back(std::make_tuple(addr, buf, len));
-				}
-				amx->hea += len;
 			}else if(lua_islightuserdata(L, i))
 			{
 				value = reinterpret_cast<cell>(lua_touserdata(L, i));
@@ -124,6 +131,8 @@ int __call(lua_State *L)
 
 		amx->error = 0;
 		cell result = native(amx, params);
+
+		addr_set.clear();
 
 		for(const auto &mem : storage)
 		{
@@ -214,4 +223,16 @@ void lua::interop::amx_register_natives(AMX *amx, const AMX_NATIVE_INFO *nativel
 			}
 		}
 	}
+}
+
+bool lua::interop::amx_get_addr(AMX *amx, cell amx_addr, cell **phys_addr)
+{
+	if(phys_addr && addr_set.find(amx_addr) != addr_set.end())
+	{
+		auto hdr = (AMX_HEADER*)amx->base;
+		auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+		*phys_addr = reinterpret_cast<cell*>(data + amx_addr);
+		return true;
+	}
+	return false;
 }
