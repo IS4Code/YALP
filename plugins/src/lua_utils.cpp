@@ -73,12 +73,33 @@ void *lua::checklightudata(lua_State *L, int idx)
 	return nullptr;
 }
 
-const char *reader_func(lua_State *L, void *data, size_t *size)
-{
-	return (*reinterpret_cast<const lua::Reader*>(data))(L, size);
-}
-
 int lua::load(lua_State *L, const lua::Reader &reader, const char *chunkname, const char *mode)
 {
-	return lua_load(L, reader_func, const_cast<lua::Reader*>(&reader), chunkname, mode);
+	return lua_load(L, [](lua_State *L, void *data, size_t *size) {
+		return (*reinterpret_cast<const lua::Reader*>(data))(L, size);
+	}, const_cast<lua::Reader*>(&reader), chunkname, mode);
+}
+
+void lua::pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn)
+{
+	lua_pushlightuserdata(L, const_cast<std::function<int(lua_State *L)>*>(&fn));
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		auto f = lua_touserdata(L, lua_upvalueindex(1));
+		return (*reinterpret_cast<const std::function<int(lua_State *L)>*>(f))(L);
+	}, 1);
+}
+
+int lua::getfieldprotected(lua_State *L, int idx, const char *k)
+{
+	idx = lua_absindex(L, idx);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		auto k = reinterpret_cast<const char*>(lua_touserdata(L, 2));
+		lua_getfield(L, 1, k);
+		return 1;
+	});
+	lua_pushvalue(L, idx);
+	lua_pushlightuserdata(L, const_cast<char*>(k));
+	return lua_pcall(L, 2, 1, 0);
 }

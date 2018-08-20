@@ -262,10 +262,10 @@ int heapalloc(lua_State *L)
 		return lua::amx_error(L, AMX_ERR_STACKERR);
 	}
 	cell offset = amx->hea;
-	amx->hea += size;
+	amx->hea += (size_t)size;
 	auto hdr = (AMX_HEADER*)amx->base;
 	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
-	std::memset(data + offset, 0, size);
+	std::memset(data + offset, 0, (size_t)size);
 
 	lua_pushvalue(L, lua_upvalueindex(2));
 	lua_pushvalue(L, lua_upvalueindex(3));

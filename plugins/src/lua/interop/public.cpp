@@ -1,5 +1,6 @@
 #include "public.h"
 #include "lua_utils.h"
+#include "lua_api.h"
 
 #include <unordered_map>
 #include <memory>
@@ -50,18 +51,24 @@ void lua::interop::init_public(lua_State *L, AMX *amx)
 	info->self = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
-bool getpublic(lua_State *L, const char *name, int index)
+bool getpublic(lua_State *L, const char *name, int index, int &error)
 {
 	if(lua_rawgeti(L, LUA_REGISTRYINDEX, index) == LUA_TTABLE)
 	{
-		if(lua_getfield(L, -1, name) == LUA_TFUNCTION)
+		error = lua::getfieldprotected(L, -1, name);
+		if(error != LUA_OK || !lua_isfunction(L, -1))
 		{
-			lua_remove(L, -2);
-			return true;
+			if(error != LUA_OK)
+			{
+				lua::report_error(L, error);
+			}
+			lua_pop(L, 2);
+			return false;
 		}
-		lua_pop(L, 2);
-		return false;
+		lua_remove(L, -2);
+		return true;
 	}
+	error = LUA_OK;
 	lua_pop(L, 1);
 	return false;
 }
@@ -76,7 +83,7 @@ bool getpubliclist(lua_State *L, int index)
 	return false;
 }
 
-bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index)
+bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, int &error)
 {
 	if(index)
 	{
@@ -95,7 +102,8 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index)
 						indexed = true;
 					}
 					lua_pop(L, 1);
-					if(getpublic(L, funcname, info->publictable))
+					int lerror;
+					if(getpublic(L, funcname, info->publictable, lerror))
 					{
 						if(indexed)
 						{
@@ -104,6 +112,7 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index)
 								lua_insert(L, -2);
 								lua_rawseti(L, -2, 1);
 								lua_pop(L, 2);
+								error = AMX_ERR_NONE;
 								return true;
 							}
 							lua_pop(L, 1);
@@ -117,10 +126,15 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index)
 							lua_pushinteger(L, *index);
 							lua_setfield(L, -2, funcname);
 							lua_pop(L, 1);
+							error = AMX_ERR_NONE;
 							return true;
 						}
 						lua_pop(L, 1);
-					}else if(indexed)
+					}else if(lerror != LUA_OK)
+					{
+						error = AMX_ERR_GENERAL;
+						return true;
+					}if(indexed)
 					{
 						if(lua_rawgeti(L, -1, *index) == LUA_TTABLE)
 						{
@@ -131,6 +145,8 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index)
 					}
 					lua_pop(L, 1);
 				}
+				error = AMX_ERR_INDEX;
+				return true;
 			}
 		}
 	}
@@ -221,38 +237,41 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 						*--stk = 0;
 						amx->frm = amx->stk;
 
-						switch(lua_pcall(L, paramcount, 1, 0))
+						int error = lua_pcall(L, paramcount, 1, 0);
+						if(error == LUA_OK)
 						{
-							case LUA_OK:
-								amx->error = AMX_ERR_NONE;
-								if(retval)
+							amx->error = AMX_ERR_NONE;
+							if(retval)
+							{
+								if(lua_isinteger(L, -1))
 								{
-									if(lua_isinteger(L, -1))
-									{
-										*retval = (cell)lua_tointeger(L, -1);
-									}else if(lua_isnumber(L, -1))
-									{
-										float num = (float)lua_tonumber(L, -1);
-										*retval = amx_ftoc(num);
-									}else if(lua_isboolean(L, -1))
-									{
-										*retval = lua_toboolean(L, -1);
-									}else if(lua_islightuserdata(L, -1))
-									{
-										*retval = reinterpret_cast<cell>(lua_touserdata(L, -1));
-									}else{
-										*retval = 0;
-									}
+									*retval = (cell)lua_tointeger(L, -1);
+								}else if(lua_isnumber(L, -1))
+								{
+									float num = (float)lua_tonumber(L, -1);
+									*retval = amx_ftoc(num);
+								}else if(lua_isboolean(L, -1))
+								{
+									*retval = lua_toboolean(L, -1);
+								}else if(lua_islightuserdata(L, -1))
+								{
+									*retval = reinterpret_cast<cell>(lua_touserdata(L, -1));
+								}else{
+									*retval = 0;
 								}
-								break;
-							case LUA_ERRMEM:
-								lua_pop(L, 1);
-								amx->error = AMX_ERR_MEMORY;
-								break;
-							default:
-								lua_pop(L, 1);
-								amx->error = AMX_ERR_GENERAL;
-								break;
+							}
+						}else{
+							switch(error)
+							{
+								case LUA_ERRMEM:
+									amx->error = AMX_ERR_MEMORY;
+									break;
+								default:
+									amx->error = AMX_ERR_GENERAL;
+									break;
+							}
+							lua::report_error(L, error);
+							lua_pop(L, 1);
 						}
 						amx->stk = reset_stk;
 						lua_pop(L, 3);

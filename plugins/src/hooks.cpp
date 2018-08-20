@@ -147,9 +147,10 @@ namespace hooks
 
 	int AMXAPI amx_FindPublic(AMX *amx, const char *funcname, int *index)
 	{
-		if(lua::interop::amx_find_public(amx, funcname, index))
+		int error;
+		if(lua::interop::amx_find_public(amx, funcname, index, error))
 		{
-			return AMX_ERR_NONE;
+			return error;
 		}
 
 		return amx_FindPublicOrig(amx, funcname, index);

@@ -2,6 +2,7 @@
 #include "lua/timer.h"
 #include "lua/interop.h"
 #include "lua/remote.h"
+#include "main.h"
 
 static int custom_print(lua_State *L)
 {
@@ -48,4 +49,9 @@ void lua::init(lua_State *L)
 		lua_pop(L, 1);
 	}
 	lua_pop(L, 1);
+}
+
+void lua::report_error(lua_State *L, int error)
+{
+	logprintf("internal AMX error %d: %s", error, lua_tostring(L, -1));
 }
