@@ -131,6 +131,42 @@ namespace Natives
 
 		return result;
 	}
+
+	// native lua_stackdump(Lua:L, depth=-1);
+	static cell AMX_NATIVE_CALL lua_stackdump(AMX *amx, cell *params)
+	{
+		auto L = reinterpret_cast<lua_State*>(params[1]);
+		int top = lua_gettop(L);
+		int bottom = 1;
+		if(params[2] >= 0) bottom = top - params[2] + 1;
+		bool tostring = lua_getglobal(L, "tostring") == LUA_TFUNCTION;
+		if(!tostring) lua_pop(L, 1);
+		for(int i = top; i >= bottom; i--)
+		{
+			if(!tostring)
+			{
+				if(auto str = lua_tostring(L, i))
+				{
+					logprintf("%s", str);
+				}else{
+					logprintf("%s", luaL_typename(L, i));
+				}
+			}else{
+				lua_pushvalue(L, -1);
+				lua_pushvalue(L, i);
+				lua_pcall(L, 1, 1, 0);
+				if(auto str = lua_tostring(L, -1))
+				{
+					logprintf("%s", str);
+				}else{
+					logprintf("%s", luaL_typename(L, i));
+				}
+				lua_pop(L, 1);
+			}
+		}
+		lua_pop(L, 1);
+		return 0;
+	}
 }
 
 static AMX_NATIVE_INFO native_list[] =
@@ -141,6 +177,7 @@ static AMX_NATIVE_INFO native_list[] =
 	AMX_DECLARE_NATIVE(lua_load),
 	{"lua_pcall", Natives::_lua_pcall},
 	{"lua_call", Natives::_lua_call},
+	AMX_DECLARE_NATIVE(lua_stackdump),
 };
 
 int RegisterNatives(AMX *amx)

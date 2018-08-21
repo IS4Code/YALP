@@ -15,17 +15,24 @@ native bool:lua_close(Lua:L);
 native lua_load(Lua:L, const reader[], data, bufsize=-1, chunkname[]="");
 native lua_pcall(Lua:L, nargs, nresults, errfunc);
 native lua_call(Lua:L, nargs, nresults);
+native lua_stackdump(Lua:L, depth=-1);
 
-stock lua_dofile(Lua:L, File:file, bufsize=-1, chunkname[]="")
+stock lua_dofile(Lua:L, const name[], bufsize=-1)
 {
-    new err = lua_loadfile(L, file, bufsize, chunkname);
+    new err = lua_loadfile(L, name, bufsize);
     if(err) return err;
     return lua_pcall(L, 0, -1, 0);
 }
 
-stock lua_loadfile(Lua:L, File:file, bufsize=-1, chunkname[]="")
+stock lua_loadfile(Lua:L, const name[], bufsize=-1)
 {
-    return lua_load(L, #_lua_freader, _:file, bufsize, chunkname);
+    new File:file = fopen(name, io_read);
+    if(!file) return 7;
+    new chunkname[64] = "@";
+    strcat(chunkname, name);
+    new err = lua_load(L, #_lua_freader, _:file, bufsize, chunkname);
+    fclose(file);
+    return err;
 }
 
 forward _lua_freader(Lua:L, buffer[], File:file, size);
