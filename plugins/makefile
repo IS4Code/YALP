@@ -20,6 +20,9 @@ static: all
 YALP: clean
 	$(GPP) $(YALP) ./lib/sdk/*.cpp
 	$(GCC) $(YALP) ./lib/subhook/*.c
-	$(GCC) $(YALP) ./lib/lua/*.c
+	$(GPP) $(YALP) ./lib/lua/*.cpp
+	$(GPP) $(YALP) ./src/amx/*.cpp
+	$(GPP) $(YALP) ./src/lua/interop/*.cpp
+	$(GPP) $(YALP) ./src/lua/*.cpp
 	$(GPP) $(YALP) ./src/*.cpp
 	$(LINK) -fshort-wchar -pthread -shared -o $(PP_OUTFILE) *.o

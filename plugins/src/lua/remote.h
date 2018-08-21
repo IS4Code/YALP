@@ -1,7 +1,7 @@
 #ifndef REMOTE_H_INCLUDED
 #define REMOTE_H_INCLUDED
 
-#include "lua/lua.hpp"
+#include "lua/lualibs.h"
 
 namespace lua
 {

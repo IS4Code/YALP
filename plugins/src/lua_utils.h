@@ -1,7 +1,7 @@
 #ifndef LUA_UTILS_H_INCLUDED
 #define LUA_UTILS_H_INCLUDED
 
-#include "lua/lua.hpp"
+#include "lua/lualibs.h"
 #include <type_traits>
 #include <functional>
 

@@ -1,10 +1,7 @@
 #include "lua_utils.h"
 #include "amxutils.h"
 #include "sdk/amx/amx.h"
-extern "C"
-{
 #include "lua/lstate.h"
-}
 
 int lua::amx_error(lua_State *L, int error)
 {

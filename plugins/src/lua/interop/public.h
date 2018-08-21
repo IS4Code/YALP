@@ -1,7 +1,7 @@
 #ifndef PUBLIC_H_INCLUDED
 #define PUBLIC_H_INCLUDED
 
-#include "lua/lua.hpp"
+#include "lua/lualibs.h"
 #include "sdk/amx/amx.h"
 
 namespace lua

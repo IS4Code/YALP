@@ -2,7 +2,7 @@
 #define LUA_API_H_INCLUDED
 
 #include "main.h"
-#include "lua/lua.hpp"
+#include "lua/lualibs.h"
 
 namespace lua
 {

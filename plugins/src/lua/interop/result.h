@@ -1,7 +1,7 @@
 #ifndef RESULT_H_INCLUDED
 #define RESULT_H_INCLUDED
 
-#include "lua/lua.hpp"
+#include "lua/lualibs.h"
 #include "sdk/amx/amx.h"
 
 namespace lua
