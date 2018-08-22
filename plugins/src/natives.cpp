@@ -5,13 +5,13 @@
 
 namespace Natives
 {
-	// native Lua:lua_newstate();
+	// native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs);
 	static cell AMX_NATIVE_CALL lua_newstate(AMX *amx, cell *params)
 	{
 		auto L = luaL_newstate();
 		if(L)
 		{
-			lua::init(L);
+			lua::init(L, params[1], params[2]);
 		}
 		return reinterpret_cast<cell>(L);
 	}

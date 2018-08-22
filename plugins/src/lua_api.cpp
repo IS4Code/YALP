@@ -3,6 +3,7 @@
 #include "lua/interop.h"
 #include "lua/remote.h"
 #include "main.h"
+#include <vector>
 
 static int custom_print(lua_State *L)
 {
@@ -41,23 +42,67 @@ static int custom_print(lua_State *L)
 	return 0;
 }
 
-void lua::init(lua_State *L)
+int take(lua_State *L)
 {
-	luaL_openlibs(L);
-	lua_register(L, "print", custom_print);
+	int numrets = luaL_checkinteger(L, 1);
+	int numargs = lua_gettop(L) - 2;
+	lua_call(L, numargs, numrets);
+	return numrets;
+}
+
+int open_base(lua_State *L)
+{
+	luaopen_base(L);
+	lua_pushcfunction(L, custom_print);
+	lua_setfield(L, -2, "print");
+	lua_pushcfunction(L, take);
+	lua_setfield(L, -2, "take");
+	return 1;
+}
+
+std::vector<std::pair<const char*, lua_CFunction>> libs = {
+	{"_G", open_base},
+	{LUA_LOADLIBNAME, luaopen_package},
+	{LUA_COLIBNAME, luaopen_coroutine},
+	{LUA_TABLIBNAME, luaopen_table},
+	{LUA_IOLIBNAME, luaopen_io},
+	{LUA_OSLIBNAME, luaopen_os},
+	{LUA_STRLIBNAME, luaopen_string},
+	{LUA_MATHLIBNAME, luaopen_math},
+	{LUA_UTF8LIBNAME, luaopen_utf8},
+	{LUA_DBLIBNAME, luaopen_debug},
+	{"interop", lua::interop::loader},
+	{"timer", lua::timer::loader},
+	{"remote", lua::remote::loader},
+};
+
+void lua::init(lua_State *L, int load, int preload)
+{
+	for(size_t i = 0; i < libs.size(); i++)
+	{
+		if(load & (1 << i))
+		{
+			const auto &lib = libs[i];
+			luaL_requiref(L, lib.first, lib.second, 1);
+			lua_pop(L, 1);
+		}
+	}
+
 	if(lua_getglobal(L, "package") == LUA_TTABLE)
 	{
-		lua_getfield(L, -1, "preload");
-
-		lua_pushcfunction(L, lua::timer::loader);
-		lua_setfield(L, -2, "timer");
-
-		lua_pushcfunction(L, lua::interop::loader);
-		lua_setfield(L, -2, "interop");
-		
-		lua_pushcfunction(L, lua::remote::loader);
-		lua_setfield(L, -2, "remote");
-
+		preload &= ~load;
+		if(lua_getfield(L, -1, "preload") == LUA_TTABLE)
+		{
+			for(size_t i = 0; i < libs.size(); i++)
+			{
+				if(preload & (1 << i))
+				{
+					const auto &lib = libs[i];
+					lua_pushcfunction(L, lib.second);
+					lua_setfield(L, -2, lib.first);
+				}
+			}
+		}
 		lua_pop(L, 1);
 	}
 	lua_pop(L, 1);

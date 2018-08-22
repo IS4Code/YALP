@@ -6,7 +6,7 @@
 
 namespace lua
 {
-	void init(lua_State *L);
+	void init(lua_State *L, int load, int preload);
 	void report_error(lua_State *L, int error);
 }
 
