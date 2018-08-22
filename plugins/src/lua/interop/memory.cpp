@@ -9,7 +9,12 @@ constexpr cell STKMARGIN = 16 * sizeof(cell);
 
 int newbuffer(lua_State *L)
 {
-	auto size = (size_t)luaL_checkinteger(L, 1) * sizeof(cell);
+	auto isize = luaL_checkinteger(L, 1);
+	if(isize < 0)
+	{
+		return luaL_argerror(L, 1, "out of range");
+	}
+	auto size = (size_t)isize * sizeof(cell);
 	auto buf = lua_newuserdata(L, size);
 	std::memset(buf, 0, size);
 	lua_pushvalue(L, lua_upvalueindex(1));
@@ -269,9 +274,13 @@ int span(lua_State *L)
 
 int heapalloc(lua_State *L)
 {
-	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	auto size = luaL_checkinteger(L, 1) * sizeof(cell);
+	if(size < 0)
+	{
+		return luaL_argerror(L, 1, "out of range");
+	}
 
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	if(amx->hea + size + STKMARGIN > amx->stk)
 	{
 		return lua::amx_error(L, AMX_ERR_STACKERR);
