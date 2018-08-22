@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstring>
+#include <functional>
 
 constexpr cell STKMARGIN = 16 * sizeof(cell);
 
@@ -16,51 +17,65 @@ int newbuffer(lua_State *L)
 	return 1;
 }
 
-bool toblock(lua_State *L, int idx)
+bool toblock(lua_State *L, int idx, const std::function<void*(lua_State*, size_t)> &alloc)
 {
 	size_t len;
 	bool isconst;
+	cell value;
 	if(lua_isinteger(L, idx))
 	{
-		lua::pushuserdata(L, (cell)lua_tointeger(L, idx));
+		value = (cell)lua_tointeger(L, idx);
 	}else if(lua_isnumber(L, idx))
 	{
 		float num = (float)lua_tonumber(L, idx);
-		lua::pushuserdata(L, amx_ftoc(num));
+		value = amx_ftoc(num);
 	}else if(lua_isboolean(L, idx))
 	{
-		lua::pushuserdata(L, (cell)lua_toboolean(L, idx));
+		value = (cell)lua_toboolean(L, idx);
 	}else if(lua_isstring(L, idx))
 	{
 		size_t len;
 		auto str = lua_tolstring(L, idx, &len);
 		len++;
 
-		auto addr = reinterpret_cast<cell*>(lua_newuserdata(L, len * sizeof(cell)));
+		auto addr = reinterpret_cast<cell*>(alloc(L, len * sizeof(cell)));
+		if(!addr) return false;
 		for(size_t i = 0; i < len; i++)
 		{
 			addr[i] = str[i];
 		}
+		return true;
 	}else if(auto src = lua::tobuffer(L, idx, len, isconst))
 	{
-		void *dst = lua_newuserdata(L, len);
-		std::memcpy(dst, src, len);
+		auto addr = reinterpret_cast<cell*>(alloc(L, len));
+		if(!addr) return false;
+		std::memcpy(addr, src, len);
+		return true;
 	}else{
 		return false;
 	}
+	auto addr = reinterpret_cast<cell*>(alloc(L, 1 * sizeof(cell)));
+	if(!addr) return false;
+	*addr = value;
 	return true;
 }
 
 int tobuffer(lua_State *L)
 {
-	if(!toblock(L, 1))
+	int args = lua_gettop(L);
+	auto numr = lua::numresults(L);
+	if(numr >= 0 && numr < args) args = numr;
+	for(int i = 1; i <= args; i++)
 	{
-		luaL_argerror(L, 1, "type not expected");
-		return 0;
+		if(!toblock(L, i, lua_newuserdata))
+		{
+			luaL_argerror(L, i, "type not expected");
+			return 0;
+		}
+		lua_pushvalue(L, lua_upvalueindex(1));
+		lua_setmetatable(L, -2);
 	}
-	lua_pushvalue(L, lua_upvalueindex(1));
-	lua_setmetatable(L, -2);
-	return 1;
+	return args;
 }
 
 int buffer_len(lua_State *L)
@@ -300,21 +315,94 @@ int heapfree(lua_State *L)
 
 int toheap(lua_State *L)
 {
-	if(!toblock(L, 1))
+	int args = lua_gettop(L);
+	for(int i = 1; i <= args; i++)
 	{
-		luaL_argerror(L, 1, "type not expected");
-		return 0;
+		if(!toblock(L, i, [](lua_State *L, size_t size)
+		{
+			lua_pushvalue(L, lua_upvalueindex(1));
+			lua_pushinteger(L, size / sizeof(cell));
+			lua_call(L, 1, 1);
+			bool isconst;
+			if(auto buf = lua::tobuffer(L, -1, size, isconst))
+			{
+				return buf;
+			}
+			return static_cast<void*>(nullptr);
+		}))
+		{
+			luaL_argerror(L, i, "type not expected");
+			return 0;
+		}
 	}
-	size_t len = lua_rawlen(L, -1);
+	return args;
+}
+
+int varargs(lua_State *L)
+{
+	int args = lua_gettop(L);
+	auto numr = lua::numresults(L);
+	if(numr >= 0 && numr < args) args = numr;
+	std::vector<cell> data;
+	std::vector<std::pair<size_t, size_t>> sizes;
+	for(int i = 1; i <= args; i++)
+	{
+		if(!toblock(L, i, [&](lua_State *L, size_t size)
+		{
+			auto oldsize = data.size();
+			data.resize(oldsize + size / sizeof(cell));
+			sizes.push_back(std::make_pair(oldsize * sizeof(cell), size / sizeof(cell)));
+			return &data[oldsize];
+		}))
+		{
+			luaL_argerror(L, i, "type not expected");
+			return 0;
+		}
+	}
+	size_t size = data.size() * sizeof(cell);
+	void *addr = lua_newuserdata(L, size);
+	std::memcpy(addr, &data[0], size);
 	lua_pushvalue(L, lua_upvalueindex(1));
-	lua_pushinteger(L, len / sizeof(cell));
-	lua_call(L, 1, 1);
-	bool isconst;
-	if(auto buf = lua::tobuffer(L, -1, len, isconst))
+	lua_setmetatable(L, -2);
+	int buffer = lua_absindex(L, -1);
+	for(const auto &pair : sizes)
 	{
-		std::memcpy(buf, lua_touserdata(L, -2), len);
+		lua_pushvalue(L, lua_upvalueindex(2));
+		lua_pushvalue(L, buffer);
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(pair.first));
+		lua_pushinteger(L, pair.second);
+		lua_call(L, 3, 1);
 	}
-	return 1;
+	return args;
+}
+
+int heapargs(lua_State *L)
+{
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto hdr = (AMX_HEADER*)amx->base;
+	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+
+	int args = lua_gettop(L);
+	for(int i = 1; i <= args; i++)
+	{
+		if(!toblock(L, i, [=](lua_State *L, size_t size)
+		{
+			if(amx->hea + (cell)size + STKMARGIN > amx->stk)
+			{
+				lua::amx_error(L, AMX_ERR_STACKERR);
+				return static_cast<void*>(nullptr);
+			}
+			cell offset = amx->hea;
+			amx->hea += (size_t)size;
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(offset));
+			return static_cast<void*>(data + offset);
+		}))
+		{
+			luaL_argerror(L, i, "type not expected");
+			return 0;
+		}
+	}
+	return args;
 }
 
 void lua::interop::init_memory(lua_State *L, AMX *amx)
@@ -402,6 +490,15 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	lua_getfield(L, table, "heapalloc");
 	lua_pushcclosure(L, toheap, 1);
 	lua_setfield(L, table, "toheap");
+
+	lua_pushvalue(L, buffer);
+	lua_getfield(L, table, "span");
+	lua_pushcclosure(L, varargs, 2);
+	lua_setfield(L, table, "varargs");
+
+	lua_pushlightuserdata(L, amx);
+	lua_pushcclosure(L, heapargs, 1);
+	lua_setfield(L, table, "heapargs");
 
 	lua_settop(L, table);
 }
