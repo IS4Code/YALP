@@ -31,7 +31,7 @@ native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs);
 native lua_dostring(Lua:L, str[]);
 native bool:lua_close(Lua:L);
 native lua_load(Lua:L, const reader[], data, bufsize=-1, chunkname[]="");
-native lua_pcall(Lua:L, nargs, nresults, errfunc);
+native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 native lua_call(Lua:L, nargs, nresults);
 native lua_stackdump(Lua:L, depth=-1);
 

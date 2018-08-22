@@ -44,7 +44,7 @@ static int custom_print(lua_State *L)
 
 int take(lua_State *L)
 {
-	int numrets = luaL_checkinteger(L, 1);
+	int numrets = (int)luaL_checkinteger(L, 1);
 	int numargs = lua_gettop(L) - 2;
 	lua_call(L, numargs, numrets);
 	return numrets;

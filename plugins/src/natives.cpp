@@ -11,7 +11,7 @@ namespace Natives
 		auto L = luaL_newstate();
 		if(L)
 		{
-			lua::init(L, params[1], params[2]);
+			lua::init(L, optparam(1, 0x33), optparam(2, 0x700));
 		}
 		return reinterpret_cast<cell>(L);
 	}
@@ -35,12 +35,12 @@ namespace Natives
 		return 1;
 	}
 
-	// native lua_pcall(Lua:L, nargs, nresults, errfunc);
+	// native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 	static cell AMX_NATIVE_CALL _lua_pcall(AMX *amx, cell *params)
 	{
 		auto L = reinterpret_cast<lua_State*>(params[1]);
 
-		return lua_pcall(L, params[2], params[3], params[4]);
+		return lua_pcall(L, params[2], params[3], optparam(4, 0));
 	}
 
 	// native lua_call(Lua:L, nargs, nresults);
@@ -71,15 +71,15 @@ namespace Natives
 	{
 		auto L = reinterpret_cast<lua_State*>(params[1]);
 
-		char *reader;
+		const char *reader;
 		amx_StrParam(amx, params[2], reader);
 
 		cell data = params[3];
 		cell cellsize = params[4];
 		if(cellsize < 0) cellsize = 128;
 
-		char *chunkname;
-		amx_StrParam(amx, params[5], chunkname);
+		const char *chunkname;
+		amx_OptStrParam(amx, 5, chunkname, nullptr);
 
 		int error;
 
@@ -138,7 +138,8 @@ namespace Natives
 		auto L = reinterpret_cast<lua_State*>(params[1]);
 		int top = lua_gettop(L);
 		int bottom = 1;
-		if(params[2] >= 0) bottom = top - params[2] + 1;
+		cell depth = optparam(2, -1);
+		if(depth >= 0) bottom = top - depth + 1;
 		bool tostring = lua_getglobal(L, "tostring") == LUA_TFUNCTION;
 		if(!tostring) lua_pop(L, 1);
 		for(int i = top; i >= bottom; i--)
