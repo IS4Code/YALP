@@ -11,7 +11,8 @@
 
 enum lua_lib (<<= 1)
 {
-    lua_lib_package = 1,
+    lua_lib_base = 1,
+    lua_lib_package,
     lua_lib_coroutine,
     lua_lib_io,
     lua_lib_os,
@@ -24,7 +25,7 @@ enum lua_lib (<<= 1)
     lua_lib_remote,
 }
 
-const lua_lib:lua_baselibs = lua_lib_package | lua_lib_coroutine | lua_lib_string | lua_lib_math;
+const lua_lib:lua_baselibs = lua_lib_base | lua_lib_package | lua_lib_coroutine | lua_lib_string | lua_lib_math;
 const lua_lib:lua_newlibs = lua_lib_interop | lua_lib_timer | lua_lib_remote;
 
 native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs);

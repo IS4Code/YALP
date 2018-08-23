@@ -11,7 +11,7 @@ namespace Natives
 		auto L = luaL_newstate();
 		if(L)
 		{
-			lua::init(L, optparam(1, 0x33), optparam(2, 0x700));
+			lua::init(L, optparam(1, 0x67), optparam(2, 0xE00));
 		}
 		return reinterpret_cast<cell>(L);
 	}
@@ -139,7 +139,7 @@ namespace Natives
 		int top = lua_gettop(L);
 		int bottom = 1;
 		cell depth = optparam(2, -1);
-		if(depth >= 0) bottom = top - depth + 1;
+		if(depth >= 0 && depth <= top) bottom = top - depth + 1;
 		bool tostring = lua_getglobal(L, "tostring") == LUA_TFUNCTION;
 		if(!tostring) lua_pop(L, 1);
 		for(int i = top; i >= bottom; i--)
