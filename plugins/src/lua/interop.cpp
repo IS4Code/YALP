@@ -8,6 +8,7 @@
 #include "interop/string.h"
 #include "interop/result.h"
 #include "interop/tags.h"
+#include "interop/sleep.h"
 
 #include <unordered_map>
 #include <string>
@@ -45,6 +46,7 @@ int lua::interop::loader(lua_State *L)
 		init_string(L, amx);
 		init_result(L, amx);
 		init_tags(L, amx);
+		init_sleep(L, amx);
 	});
 	if(!amx)
 	{

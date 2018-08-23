@@ -1,6 +1,7 @@
 #include "public.h"
 #include "lua_utils.h"
 #include "lua_api.h"
+#include "sleep.h"
 
 #include <unordered_map>
 #include <memory>
@@ -16,6 +17,7 @@ struct amx_public_info
 	int self;
 	int publictable;
 	int publiclist;
+	int contlist;
 
 	amx_public_info(lua_State *L, AMX *amx) : L(L), amx(amx)
 	{
@@ -47,6 +49,9 @@ void lua::interop::init_public(lua_State *L, AMX *amx)
 
 	lua_newtable(L);
 	info->publiclist = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	lua_newtable(L);
+	info->contlist = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	info->self = luaL_ref(L, LUA_REGISTRYINDEX);
 }
@@ -214,51 +219,66 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 		if(auto info = it->second.lock())
 		{
 			auto L = info->L;
-			if(getpubliclist(L, info->publiclist))
+			bool cont = index == AMX_EXEC_CONT;
+			if(cont || getpubliclist(L, info->publiclist))
 			{
-				if(lua_rawgeti(L, -1, index) == LUA_TTABLE)
+				int tt = cont ? lua_rawgeti(L, LUA_REGISTRYINDEX, info->contlist) : lua_rawgeti(L, -1, index);
+				if(tt == LUA_TTABLE)
 				{
-					if(lua_rawgeti(L, -1, 1) == LUA_TFUNCTION)
+					if(lua_rawgeti(L, -1, cont ? amx->cip : 1) == LUA_TFUNCTION)
 					{
+						if(cont)
+						{
+							luaL_unref(L, -2, amx->cip);
+						}
 						auto hdr = (AMX_HEADER*)amx->base;
 						auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 						auto stk = reinterpret_cast<cell*>(data + amx->stk);
-						int paramcount = amx->paramcount;
-						amx->paramcount = 0;
-						for(int i = 0; i < paramcount; i++)
+						cell reset_stk = amx->stk;
+						int paramcount;
+						if(cont)
 						{
-							cell value = stk[i];
-							lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
+							paramcount = 1;
+							lua_pushlightuserdata(L, reinterpret_cast<void*>(amx->pri));
+						}else{
+							paramcount = amx->paramcount;
+							amx->paramcount = 0;
+							for(int i = 0; i < paramcount; i++)
+							{
+								cell value = stk[i];
+								lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
+							}
+							reset_stk += paramcount * sizeof(cell);
+							amx->stk -= 3 * sizeof(cell);
+							*--stk = paramcount * sizeof(cell);
+							*--stk = 0;
+							*--stk = 0;
+							amx->frm = amx->stk;
 						}
-						cell reset_stk = amx->stk + paramcount * sizeof(cell);
-						amx->stk -= 3 * sizeof(cell);
-						*--stk = paramcount * sizeof(cell);
-						*--stk = 0;
-						*--stk = 0;
-						amx->frm = amx->stk;
 
 						int error = lua_pcall(L, paramcount, 1, 0);
 						if(error == LUA_OK)
 						{
 							amx->error = AMX_ERR_NONE;
+							if(lua_isinteger(L, -1))
+							{
+								amx->pri = (cell)lua_tointeger(L, -1);
+							}else if(lua_isnumber(L, -1))
+							{
+								float num = (float)lua_tonumber(L, -1);
+								amx->pri = amx_ftoc(num);
+							}else if(lua_isboolean(L, -1))
+							{
+								amx->pri = lua_toboolean(L, -1);
+							}else if(lua_islightuserdata(L, -1))
+							{
+								amx->pri = reinterpret_cast<cell>(lua_touserdata(L, -1));
+							}else{
+								amx->pri = 0;
+							}
 							if(retval)
 							{
-								if(lua_isinteger(L, -1))
-								{
-									*retval = (cell)lua_tointeger(L, -1);
-								}else if(lua_isnumber(L, -1))
-								{
-									float num = (float)lua_tonumber(L, -1);
-									*retval = amx_ftoc(num);
-								}else if(lua_isboolean(L, -1))
-								{
-									*retval = lua_toboolean(L, -1);
-								}else if(lua_islightuserdata(L, -1))
-								{
-									*retval = reinterpret_cast<cell>(lua_touserdata(L, -1));
-								}else{
-									*retval = 0;
-								}
+								*retval = amx->pri;
 							}
 						}else{
 							switch(error)
@@ -266,21 +286,40 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 								case LUA_ERRMEM:
 									amx->error = AMX_ERR_MEMORY;
 									break;
+								case LUA_ERRRUN:
+									amx->error = AMX_ERR_GENERAL;
+									if(lua_istable(L, -1))
+									{
+										if(lua_getfield(L, -1, "__amxerr") == LUA_TNUMBER)
+										{
+											amx->error = (int)lua_tointeger(L, -1);
+										}
+										lua_pop(L, 1);
+										lua::interop::handle_sleep(L, amx, info->contlist);
+									}
+									break;
 								default:
 									amx->error = AMX_ERR_GENERAL;
 									break;
 							}
-							lua::report_error(L, error);
+							if(amx->error != AMX_ERR_SLEEP)
+							{
+								lua::report_error(L, error);
+							}
+							if(retval)
+							{
+								*retval = amx->pri;
+							}
 							lua_pop(L, 1);
 						}
 						amx->stk = reset_stk;
-						lua_pop(L, 3);
+						lua_pop(L, cont ? 2 : 3);
 						result = amx->error;
 						return true;
 					}
 					lua_pop(L, 1);
 				}
-				lua_pop(L, 2);
+				lua_pop(L, cont ? 1 : 2);
 			}
 			result = amx->error = AMX_ERR_INDEX;
 			return true;

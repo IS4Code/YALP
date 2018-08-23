@@ -3,9 +3,39 @@
 #include "sdk/amx/amx.h"
 #include "lua/lstate.h"
 
+void errortable(lua_State *L, int error)
+{
+	lua_createtable(L, 0, 1);
+	lua_pushinteger(L, error);
+	lua_setfield(L, -2, "__amxerr");
+	lua_createtable(L, 0, 1);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_getfield(L, 1, "__amxerr");
+		int error = (int)lua_tointeger(L, -1);
+		lua_pushfstring(L, "internal AMX error %d: %s", error, amx::StrError(error));
+		return 1;
+	});
+	lua_setfield(L, -2, "__tostring");
+	lua_setmetatable(L, -2);
+}
+
 int lua::amx_error(lua_State *L, int error)
 {
-	return luaL_error(L, "internal AMX error %d: %s", error, amx::StrError(error));
+	errortable(L, error);
+	return lua_error(L);
+}
+
+int lua::amx_sleep(lua_State *L, int value, int cont)
+{
+	value = lua_absindex(L, value);
+	cont = lua_absindex(L, cont);
+	errortable(L, AMX_ERR_SLEEP);
+	lua_pushvalue(L, value);
+	lua_setfield(L, -2, "__retval");
+	lua_pushvalue(L, cont);
+	lua_setfield(L, -2, "__cont");
+	return lua_error(L);
 }
 
 void *lua::testudata(lua_State *L, int ud, int mt)

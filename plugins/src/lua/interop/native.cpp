@@ -147,7 +147,24 @@ int __call(lua_State *L)
 		{
 			int code = amx->error;
 			amx->error = 0;
-			return lua::amx_error(L, code);
+			bool mainstate = false;
+			if(code == AMX_ERR_SLEEP)
+			{
+				mainstate = lua_pushthread(L);
+				lua_pop(L, 1);
+			}
+			if(code != AMX_ERR_SLEEP || mainstate)
+			{
+				return lua::amx_error(L, code);
+			}
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
+			if(castresult)
+			{
+				lua_pushvalue(L, 1);
+				return lua_yield(L, 2);
+			}else{
+				return lua_yield(L, 1);
+			}
 		}
 
 		if(lua::numresults(L) != 0)

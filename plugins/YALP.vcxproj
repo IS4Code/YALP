@@ -173,6 +173,7 @@
     <ClCompile Include="src\lua\interop\native.cpp" />
     <ClCompile Include="src\lua\interop\public.cpp" />
     <ClCompile Include="src\lua\interop\result.cpp" />
+    <ClCompile Include="src\lua\interop\sleep.cpp" />
     <ClCompile Include="src\lua\interop\string.cpp" />
     <ClCompile Include="src\lua\interop\tags.cpp" />
     <ClCompile Include="src\lua\remote.cpp" />
@@ -239,6 +240,7 @@
     <ClInclude Include="src\lua\interop\native.h" />
     <ClInclude Include="src\lua\interop\public.h" />
     <ClInclude Include="src\lua\interop\result.h" />
+    <ClInclude Include="src\lua\interop\sleep.h" />
     <ClInclude Include="src\lua\interop\string.h" />
     <ClInclude Include="src\lua\interop\tags.h" />
     <ClInclude Include="src\lua\lualibs.h" />

@@ -110,5 +110,5 @@ void lua::init(lua_State *L, int load, int preload)
 
 void lua::report_error(lua_State *L, int error)
 {
-	logprintf("internal AMX error %d: %s", error, lua_tostring(L, -1));
+	logprintf("unhandled Lua error %d: %s", error, lua_tostring(L, -1));
 }
