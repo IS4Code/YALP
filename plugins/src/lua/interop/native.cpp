@@ -150,8 +150,7 @@ int __call(lua_State *L)
 			bool mainstate = false;
 			if(code == AMX_ERR_SLEEP)
 			{
-				mainstate = lua_pushthread(L);
-				lua_pop(L, 1);
+				mainstate = !lua_isyieldable(L);
 			}
 			if(code != AMX_ERR_SLEEP || mainstate)
 			{
