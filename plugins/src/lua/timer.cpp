@@ -96,6 +96,7 @@ int settimer(lua_State *L)
 	int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	std::weak_ptr<char> handle = lua::touserdata<std::shared_ptr<char>>(L, lua_upvalueindex(1));
+	L = lua::mainthread(L);
 	Register((unsigned int)interval, [=]()
 	{
 		if(auto lock = handle.lock())

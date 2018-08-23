@@ -151,3 +151,11 @@ short lua::numresults(lua_State *L)
 	if(!L->ci) return 0;
 	return L->ci->nresults;
 }
+
+lua_State *lua::mainthread(lua_State *L)
+{
+	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+	auto GL = lua_tothread(L, -1);
+	lua_pop(L, 1);
+	return GL;
+}

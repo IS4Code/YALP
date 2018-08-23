@@ -107,6 +107,8 @@ namespace lua
 	int getfieldprotected(lua_State *L, int idx, const char *k);
 
 	short numresults(lua_State *L);
+
+	lua_State *mainthread(lua_State *L);
 }
 
 #endif
