@@ -50,6 +50,9 @@ bool toblock(lua_State *L, int idx, const std::function<void*(lua_State*, size_t
 			addr[i] = str[i];
 		}
 		return true;
+	}else if(lua_islightuserdata(L, idx))
+	{
+		value = reinterpret_cast<cell>(lua_touserdata(L, idx));
 	}else if(auto src = lua::tobuffer(L, idx, len, isconst))
 	{
 		auto addr = reinterpret_cast<cell*>(alloc(L, len));
@@ -127,6 +130,9 @@ int buffer_newindex(lua_State *L)
 	}else if(lua_isboolean(L, 3))
 	{
 		value = (cell)lua_toboolean(L, 3);
+	}else if(lua_islightuserdata(L, 3))
+	{
+		value = reinterpret_cast<cell>(lua_touserdata(L, 3));
 	}else{
 		luaL_argerror(L, 3, "type not expected");
 		return 0;
