@@ -168,6 +168,34 @@ namespace Natives
 		lua_pop(L, 1);
 		return 0;
 	}
+
+	static cell AMX_NATIVE_CALL lua_loopback(AMX *amx, cell *params)
+	{
+		int index, error;
+		error = amx_FindPublic(amx, "#lua", &index);
+		if(error != AMX_ERR_NONE)
+		{
+			amx_RaiseError(amx, error);
+			return 0;
+		}
+		size_t numargs = params[0] / sizeof(cell);
+		for(size_t i = numargs; i >= 1; i--)
+		{
+			error = amx_Push(amx, params[i]);
+			if(error != AMX_ERR_NONE)
+			{
+				amx_RaiseError(amx, error);
+				return 0;
+			}
+		}
+		cell retval;
+		error = amx_Exec(amx, &retval, index);
+		if(error != AMX_ERR_NONE)
+		{
+			amx_RaiseError(amx, error);
+		}
+		return retval;
+	}
 }
 
 static AMX_NATIVE_INFO native_list[] =
@@ -179,6 +207,7 @@ static AMX_NATIVE_INFO native_list[] =
 	{"lua_pcall", Natives::_lua_pcall},
 	{"lua_call", Natives::_lua_call},
 	AMX_DECLARE_NATIVE(lua_stackdump),
+	AMX_DECLARE_NATIVE(lua_loopback),
 };
 
 int RegisterNatives(AMX *amx)

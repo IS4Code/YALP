@@ -109,6 +109,12 @@ namespace lua
 	short numresults(lua_State *L);
 
 	lua_State *mainthread(lua_State *L);
+
+	template <size_t Len>
+	const char *pushstring(lua_State *L, const char(&s)[Len])
+	{
+		return lua_pushlstring(L, s, Len - 1);
+	}
 }
 
 #endif

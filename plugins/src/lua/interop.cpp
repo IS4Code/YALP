@@ -47,6 +47,9 @@ int lua::interop::loader(lua_State *L)
 		init_result(L, amx);
 		init_tags(L, amx);
 		init_sleep(L, amx);
+
+		lua::pushstring(L, "#lua");
+		lua_setfield(L, -2, "loopback");
 	});
 	if(!amx)
 	{
