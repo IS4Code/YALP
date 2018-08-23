@@ -11,7 +11,7 @@ namespace Natives
 		auto L = luaL_newstate();
 		if(L)
 		{
-			lua::init(L, optparam(1, 0x67), optparam(2, 0xE00));
+			lua::init(L, optparam(1, 0xCF), optparam(2, 0x1C00));
 		}
 		return reinterpret_cast<cell>(L);
 	}

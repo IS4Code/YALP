@@ -134,5 +134,5 @@ int lua::remote::loader(lua_State *L)
 
 void lua::remote::close()
 {
-
+	ptr_map.clear();
 }
