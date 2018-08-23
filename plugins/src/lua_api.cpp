@@ -110,5 +110,23 @@ void lua::init(lua_State *L, int load, int preload)
 
 void lua::report_error(lua_State *L, int error)
 {
-	logprintf("unhandled Lua error %d: %s", error, lua_tostring(L, -1));
+	const char *msg = lua_tostring(L, -1);
+	bool pop = false;
+	if(!msg)
+	{
+		if(lua_getglobal(L, "tostring") == LUA_TFUNCTION)
+		{
+			lua_pushvalue(L, -2);
+			lua_call(L, 1, 1);
+			msg = lua_tostring(L, -1);
+			pop = true;
+		}else{
+			msg = luaL_typename(L, -1);
+		}
+	}
+	logprintf("unhandled Lua error %d: %s", error, msg);
+	if(pop)
+	{
+		lua_pop(L, 1);
+	}
 }

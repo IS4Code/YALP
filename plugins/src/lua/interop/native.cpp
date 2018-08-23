@@ -155,7 +155,7 @@ int __call(lua_State *L)
 			}
 			if(code != AMX_ERR_SLEEP || mainstate)
 			{
-				return lua::amx_error(L, code);
+				return lua::amx_error(L, code, result);
 			}
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
 			if(castresult)

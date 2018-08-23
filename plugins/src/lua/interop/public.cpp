@@ -259,6 +259,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 						int error = lua_pcall(L, paramcount, 1, 0);
 						if(error == LUA_OK)
 						{
+							amx->cip = 0;
 							amx->error = AMX_ERR_NONE;
 							if(lua_isinteger(L, -1))
 							{

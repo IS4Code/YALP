@@ -5,15 +5,18 @@
 
 void errortable(lua_State *L, int error)
 {
-	lua_createtable(L, 0, 1);
+	lua_createtable(L, 0, 3);
 	lua_pushinteger(L, error);
 	lua_setfield(L, -2, "__amxerr");
+	luaL_where(L, 1);
+	lua_setfield(L, -2, "__where");
 	lua_createtable(L, 0, 1);
 	lua_pushcfunction(L, [](lua_State *L)
 	{
 		lua_getfield(L, 1, "__amxerr");
 		int error = (int)lua_tointeger(L, -1);
-		lua_pushfstring(L, "internal AMX error %d: %s", error, amx::StrError(error));
+		lua_getfield(L, 1, "__where");
+		lua_pushfstring(L, "%sinternal AMX error %d: %s", lua_tostring(L, -1), error, amx::StrError(error));
 		return 1;
 	});
 	lua_setfield(L, -2, "__tostring");
@@ -23,6 +26,14 @@ void errortable(lua_State *L, int error)
 int lua::amx_error(lua_State *L, int error)
 {
 	errortable(L, error);
+	return lua_error(L);
+}
+
+int lua::amx_error(lua_State *L, int error, int retval)
+{
+	errortable(L, error);
+	lua_pushlightuserdata(L, reinterpret_cast<void*>(retval));
+	lua_setfield(L, -2, "__retval");
 	return lua_error(L);
 }
 

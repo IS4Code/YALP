@@ -8,6 +8,7 @@
 namespace lua
 {
 	int amx_error(lua_State *L, int error);
+	int amx_error(lua_State *L, int error, int retval);
 	int amx_sleep(lua_State *L, int value, int cont);
 
 	template <class Type>

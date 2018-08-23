@@ -20,6 +20,29 @@ int sleep(lua_State *L)
 	{
 		value = (cell)lua_toboolean(L, 1);
 	}else{
+		if(lua_isfunction(L, 1))
+		{
+			lua_pushvalue(L, 1);
+			switch(lua_pcall(L, 0, 1, 0))
+			{
+				case LUA_OK:
+					return 1;
+				default:
+					if(lua_istable(L, -1))
+					{
+						if(lua_getfield(L, -1, "__amxerr") == LUA_TNUMBER)
+						{
+							if(lua_tointeger(L, -1) == AMX_ERR_SLEEP)
+							{
+								lua_pushvalue(L, 2);
+								lua_setfield(L, -3, "__cont");
+							}
+						}
+						lua_pop(L, 1);
+					}
+					return lua_error(L);
+			}
+		}
 		return luaL_argerror(L, 1, "type not expected");
 	}
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
