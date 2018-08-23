@@ -314,7 +314,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							lua_pop(L, 1);
 						}
 						amx->stk = reset_stk;
-						lua_pop(L, cont ? 2 : 3);
+						lua_pop(L, cont ? 1 : 2);
 						result = amx->error;
 						return true;
 					}
