@@ -159,3 +159,9 @@ lua_State *lua::mainthread(lua_State *L)
 	lua_pop(L, 1);
 	return GL;
 }
+
+bool lua::checkboolean(lua_State *L, int arg)
+{
+	luaL_checktype(L, arg, LUA_TBOOLEAN);
+	return lua_toboolean(L, arg);
+}

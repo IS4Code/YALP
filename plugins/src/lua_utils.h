@@ -115,6 +115,8 @@ namespace lua
 	{
 		return lua_pushlstring(L, s, Len - 1);
 	}
+	
+	bool checkboolean(lua_State *L, int arg);
 }
 
 #endif

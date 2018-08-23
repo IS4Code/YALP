@@ -42,11 +42,15 @@ int reg(lua_State *L)
 int getref(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
+	bool remove = luaL_opt(L, lua::checkboolean, 2, false);
 	auto it = ptr_map.find(ptr);
 	if(it != ptr_map.end())
 	{
 		auto obj = it->second.lock();
-		ptr_map.erase(it);
+		if(remove)
+		{
+			ptr_map.erase(it);
+		}
 		if(obj)
 		{
 			auto L2 = obj->L;
@@ -55,6 +59,11 @@ int getref(lua_State *L)
 				if(L == L2)
 				{
 					lua_rawgetp(L, -1, ptr);
+					if(remove)
+					{
+						lua_pushnil(L);
+						lua_rawsetp(L, -3, ptr);
+					}
 					return 1;
 				}
 				switch(lua_rawgetp(L2, -1, ptr))
@@ -71,6 +80,11 @@ int getref(lua_State *L)
 						lua_pushnil(L);
 						break;
 					}
+				}
+				if(remove)
+				{
+					lua_pushnil(L2);
+					lua_rawsetp(L2, -3, ptr);
 				}
 				lua_pop(L2, 2);
 				return 1;
