@@ -158,10 +158,21 @@ int __call(lua_State *L)
 				return lua::amx_error(L, code, result);
 			}
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
-			if(castresult)
+			if(castresult && lua::numresults(L) != 0)
 			{
-				lua_pushvalue(L, 1);
-				return lua_yield(L, 2);
+				return lua_yieldk(L, 1, lua_gettop(L) - 1, [](lua_State *L, int status, lua_KContext top)
+				{
+					bool hasarg = lua_gettop(L) > top;
+					lua_pushvalue(L, 1);
+					if(hasarg)
+					{
+						lua_pushvalue(L, top + 1);
+					}else{
+						lua_pushnil(L);
+					}
+					lua_call(L, 1, 1);
+					return 1;
+				});
 			}else{
 				return lua_yield(L, 1);
 			}
