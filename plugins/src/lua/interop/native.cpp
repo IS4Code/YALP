@@ -156,10 +156,11 @@ int __call(lua_State *L)
 			{
 				return lua::amx_error(L, code, result);
 			}
+			lua_pushvalue(L, lua_upvalueindex(3));
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
 			if(castresult && lua::numresults(L) != 0)
 			{
-				return lua_yieldk(L, 1, lua_gettop(L), [](lua_State *L, int status, lua_KContext top)
+				return lua_yieldk(L, 2, lua_gettop(L) - 1, [](lua_State *L, int status, lua_KContext top)
 				{
 					lua_pushvalue(L, 1);
 					lua_insert(L, top);
@@ -167,7 +168,7 @@ int __call(lua_State *L)
 					return lua_gettop(L) - top + 1;
 				});
 			}else{
-				return lua_yield(L, 1);
+				return lua_yield(L, 2);
 			}
 		}
 
@@ -199,7 +200,8 @@ int getnative(lua_State *L)
 	{
 		lua_pushvalue(L, lua_upvalueindex(1));
 		lua_pushlightuserdata(L, it->second);
-		lua_pushcclosure(L, __call, 2);
+		lua_pushvalue(L, lua_upvalueindex(2));
+		lua_pushcclosure(L, __call, 3);
 		return 1;
 	}
 	lua_pushnil(L);
@@ -228,7 +230,8 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 	lua_createtable(L, 0, 1);
 
 	lua::pushuserdata(L, info);
-	lua_pushcclosure(L, getnative, 1);
+	lua_getfield(L, table, "sleep");
+	lua_pushcclosure(L, getnative, 2);
 	lua_pushvalue(L, -1);
 	lua_setfield(L, table, "getnative");
 	lua_pushcclosure(L, native_index, 1);

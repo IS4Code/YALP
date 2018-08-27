@@ -4,25 +4,25 @@
 
 int sleep(lua_State *L)
 {
-	luaL_checktype(L, 2, LUA_TFUNCTION);
+	luaL_checktype(L, 1, LUA_TFUNCTION);
 	cell value;
-	if(lua_islightuserdata(L, 1))
+	if(lua_islightuserdata(L, 2))
 	{
-		return lua::amx_sleep(L, 1, 2);
-	}else if(lua_isinteger(L, 1))
+		return lua::amx_sleep(L, 2, 1);
+	}else if(lua_isinteger(L, 2))
 	{
-		value = (cell)lua_tointeger(L, 1);
-	}else if(lua_isnumber(L, 1))
+		value = (cell)lua_tointeger(L, 2);
+	}else if(lua_isnumber(L, 2))
 	{
-		float num = (float)lua_tonumber(L, 1);
+		float num = (float)lua_tonumber(L, 2);
 		value = amx_ftoc(num);
-	}else if(lua_isboolean(L, 1))
+	}else if(lua_isboolean(L, 2))
 	{
-		value = (cell)lua_toboolean(L, 1);
+		value = (cell)lua_toboolean(L, 2);
 	}else{
-		if(lua_isfunction(L, 1))
+		if(lua_isfunction(L, 2))
 		{
-			lua_pushvalue(L, 1);
+			lua_pushvalue(L, 2);
 			switch(lua_pcall(L, 0, 1, 0))
 			{
 				case LUA_OK:
@@ -34,7 +34,7 @@ int sleep(lua_State *L)
 						{
 							if(lua_tointeger(L, -1) == AMX_ERR_SLEEP)
 							{
-								lua_pushvalue(L, 2);
+								lua_pushvalue(L, 1);
 								lua_setfield(L, -3, "__cont");
 							}
 						}
@@ -43,10 +43,10 @@ int sleep(lua_State *L)
 					return lua_error(L);
 			}
 		}
-		return luaL_argerror(L, 1, "type not expected");
+		return luaL_argerror(L, 2, "type not expected");
 	}
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
-	return lua::amx_sleep(L, -1, 2);
+	return lua::amx_sleep(L, -1, 1);
 }
 
 void lua::interop::init_sleep(lua_State *L, AMX *amx)

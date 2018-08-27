@@ -40,13 +40,13 @@ int lua::interop::loader(lua_State *L)
 
 		lua_newtable(L);
 
+		init_sleep(L, amx);
 		init_native(L, amx);
 		init_public(L, amx);
 		init_memory(L, amx);
 		init_string(L, amx);
 		init_result(L, amx);
 		init_tags(L, amx);
-		init_sleep(L, amx);
 
 		lua::pushstring(L, "#lua");
 		lua_setfield(L, -2, "loopback");
