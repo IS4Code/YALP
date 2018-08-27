@@ -281,6 +281,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							{
 								*retval = amx->pri;
 							}
+							lua_pop(L, 1);
 						}else{
 							switch(error)
 							{
