@@ -307,16 +307,23 @@ int heapalloc(lua_State *L)
 
 int heapfree(lua_State *L)
 {
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto hdr = (AMX_HEADER*)amx->base;
+	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+
 	size_t length;
 	bool isconst;
 	auto buf = reinterpret_cast<unsigned char*>(lua::tobuffer(L, 1, length, isconst));
 	if(!buf)
 	{
-		return luaL_argerror(L, 1, "must be a buffer type");
+		if(lua_islightuserdata(L, 1))
+		{
+			buf = data + reinterpret_cast<cell>(lua_touserdata(L, 1));
+		}else{
+			auto msg = lua_pushfstring(L, "buffer light userdata expected, got %s", luaL_typename(L, 1));
+			return luaL_argerror(L, 1, msg);
+		}
 	}
-	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
-	auto hdr = (AMX_HEADER*)amx->base;
-	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
 	if(buf >= data + amx->hlw && buf < data + amx->hea)
 	{
