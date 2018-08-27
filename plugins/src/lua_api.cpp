@@ -58,7 +58,7 @@ int bind(lua_State *L)
 	lua_insert(L, 1);
 	lua_pushcclosure(L, [](lua_State *L)
 	{
-		int num = lua_tointeger(L, lua_upvalueindex(1));
+		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
 		for(int i = 0; i < num; i++)
 		{
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
@@ -84,6 +84,45 @@ int clear(lua_State *L)
 	return 0;
 }
 
+int async(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_newthread(L);
+	lua_pushnil(L);
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		auto thread = lua_tothread(L, lua_upvalueindex(1));
+		int num = lua_gettop(L);
+		lua_xmove(L, thread, num);
+		if(lua_status(thread) == LUA_OK)
+		{
+			num--;
+		}
+		switch(lua_resume(thread, L, num))
+		{
+			case LUA_OK:
+				num = lua_gettop(thread);
+				lua_xmove(thread, L, num);
+				return num;
+			case LUA_YIELD:
+				num = lua_gettop(thread);
+				lua_xmove(thread, L, num);
+				lua_pushvalue(L, lua_upvalueindex(2));
+				lua_insert(L, 2);
+				lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
+				return lua_gettop(L);
+			default:
+				lua_xmove(thread, L, 1);
+				return lua_error(L);
+		}
+	}, 2);
+	lua_insert(L, 1);
+	lua_pushvalue(L, 1);
+	lua_setupvalue(L, 1, 2);
+	lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
+	return lua_gettop(L);
+}
+
 int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -93,6 +132,8 @@ int open_base(lua_State *L)
 	lua_setfield(L, -2, "take");
 	lua_pushcfunction(L, bind);
 	lua_setfield(L, -2, "bind");
+	lua_pushcfunction(L, async);
+	lua_setfield(L, -2, "async");
 	return 1;
 }
 
