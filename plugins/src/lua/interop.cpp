@@ -4,6 +4,7 @@
 #include "amx/loader.h"
 #include "interop/native.h"
 #include "interop/public.h"
+#include "interop/pubvar.h"
 #include "interop/memory.h"
 #include "interop/string.h"
 #include "interop/result.h"
@@ -128,9 +129,13 @@ int lua::interop::loader(lua_State *L)
 
 		lua_newtable(L);
 
+		lua_newtable(L);
+		lua_setfield(L, -2, "public");
+
 		init_sleep(L, amx);
 		init_native(L, amx);
 		init_public(L, amx);
+		init_pubvar(L, amx);
 		init_memory(L, amx);
 		init_string(L, amx);
 		init_result(L, amx);
@@ -151,4 +156,9 @@ int lua::interop::loader(lua_State *L)
 	}
 
 	return 1;
+}
+
+bool lua::interop::amx_get_addr(AMX *amx, cell amx_addr, cell **phys_addr)
+{
+	return amx_get_param_addr(amx, amx_addr, phys_addr) || amx_get_pubvar_addr(amx, amx_addr, phys_addr);
 }

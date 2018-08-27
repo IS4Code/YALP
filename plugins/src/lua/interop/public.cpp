@@ -42,9 +42,7 @@ void lua::interop::init_public(lua_State *L, AMX *amx)
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
-	lua_newtable(L);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, table, "public");
+	lua_getfield(L, table, "public");
 	info->publictable = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	lua_newtable(L);
@@ -139,7 +137,8 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 					{
 						error = AMX_ERR_GENERAL;
 						return true;
-					}if(indexed)
+					}
+					if(indexed)
 					{
 						if(lua_rawgeti(L, -1, *index) == LUA_TTABLE)
 						{

@@ -252,7 +252,7 @@ void lua::interop::amx_register_natives(AMX *amx, const AMX_NATIVE_INFO *nativel
 	}
 }
 
-bool lua::interop::amx_get_addr(AMX *amx, cell amx_addr, cell **phys_addr)
+bool lua::interop::amx_get_param_addr(AMX *amx, cell amx_addr, cell **phys_addr)
 {
 	if(phys_addr && addr_set.find(amx_addr) != addr_set.end())
 	{

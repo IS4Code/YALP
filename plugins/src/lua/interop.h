@@ -9,6 +9,7 @@ namespace lua
 	namespace interop
 	{
 		int loader(lua_State *L);
+		bool amx_get_addr(AMX *amx, cell amx_addr, cell **phys_addr);
 	}
 }
 

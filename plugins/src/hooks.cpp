@@ -3,6 +3,7 @@
 #include "lua/interop.h"
 #include "lua/interop/native.h"
 #include "lua/interop/public.h"
+#include "lua/interop/pubvar.h"
 #include "lua/interop/tags.h"
 #include "amx/loader.h"
 
@@ -18,6 +19,9 @@ subhook_t amx_Exec_h;
 subhook_t amx_FindPublic_h;
 subhook_t amx_GetPublic_h;
 subhook_t amx_NumPublics_h;
+subhook_t amx_FindPubVar_h;
+subhook_t amx_GetPubVar_h;
+subhook_t amx_NumPubVars_h;
 subhook_t amx_FindTagId_h;
 subhook_t amx_GetTag_h;
 subhook_t amx_NumTags_h;
@@ -83,6 +87,36 @@ int AMXAPI amx_NumPublicsOrig(AMX *amx, int *number)
 	}
 }
 
+int AMXAPI amx_FindPubVarOrig(AMX *amx, const char *varname, cell *amx_addr)
+{
+	if(subhook_is_installed(amx_FindPubVar_h))
+	{
+		return reinterpret_cast<decltype(&amx_FindPubVarOrig)>(subhook_get_trampoline(amx_FindPubVar_h))(amx, varname, amx_addr);
+	} else{
+		return amx_FindPubVar(amx, varname, amx_addr);
+	}
+}
+
+int AMXAPI amx_GetPubVarOrig(AMX *amx, int index, char *varname, cell *amx_addr)
+{
+	if(subhook_is_installed(amx_GetPubVar_h))
+	{
+		return reinterpret_cast<decltype(&amx_GetPubVarOrig)>(subhook_get_trampoline(amx_GetPubVar_h))(amx, index, varname, amx_addr);
+	} else{
+		return amx_GetPubVar(amx, index, varname, amx_addr);
+	}
+}
+
+int AMXAPI amx_NumPubVarsOrig(AMX *amx, int *number)
+{
+	if(subhook_is_installed(amx_NumPubVars_h))
+	{
+		return reinterpret_cast<decltype(&amx_NumPubVarsOrig)>(subhook_get_trampoline(amx_NumPubVars_h))(amx, number);
+	} else{
+		return amx_NumPubVars(amx, number);
+	}
+}
+
 int AMXAPI amx_FindTagIdOrig(AMX *amx, cell tag_id, char *tagname)
 {
 	if(subhook_is_installed(amx_FindTagId_h))
@@ -145,6 +179,13 @@ namespace hooks
 		return amx_ExecOrig(amx, retval, index);
 	}
 
+	int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)
+	{
+		int ret = amx_RegisterOrig(amx, nativelist, number);
+		lua::interop::amx_register_natives(amx, nativelist, number);
+		return ret;
+	}
+
 	int AMXAPI amx_FindPublic(AMX *amx, const char *funcname, int *index)
 	{
 		int error;
@@ -154,13 +195,6 @@ namespace hooks
 		}
 
 		return amx_FindPublicOrig(amx, funcname, index);
-	}
-
-	int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)
-	{
-		int ret = amx_RegisterOrig(amx, nativelist, number);
-		lua::interop::amx_register_natives(amx, nativelist, number);
-		return ret;
 	}
 
 	int AMXAPI amx_GetPublic(AMX *amx, int index, char *funcname)
@@ -181,6 +215,37 @@ namespace hooks
 		}
 
 		return amx_NumPublicsOrig(amx, number);
+	}
+
+	int AMXAPI amx_FindPubVar(AMX *amx, const char *varname, cell *amx_addr)
+	{
+		int error;
+		if(lua::interop::amx_find_pubvar(amx, varname, amx_addr, error))
+		{
+			return error;
+		}
+
+		return amx_FindPubVarOrig(amx, varname, amx_addr);
+	}
+
+	int AMXAPI amx_GetPubVar(AMX *amx, int index, char *varname, cell *amx_addr)
+	{
+		if(lua::interop::amx_get_pubvar(amx, index, varname, amx_addr))
+		{
+			return AMX_ERR_NONE;
+		}
+
+		return amx_GetPubVarOrig(amx, index, varname, amx_addr);
+	}
+
+	int AMXAPI amx_NumPubVars(AMX *amx, int *number)
+	{
+		if(lua::interop::amx_num_pubvars(amx, number))
+		{
+			return AMX_ERR_NONE;
+		}
+
+		return amx_NumPubVarsOrig(amx, number);
 	}
 
 	int AMXAPI amx_FindTagId(AMX *amx, cell tag_id, char *tagname)
@@ -239,6 +304,9 @@ void hooks::load()
 	register_amx_hook(amx_FindPublic_h, PLUGIN_AMX_EXPORT_FindPublic, &hooks::amx_FindPublic);
 	register_amx_hook(amx_GetPublic_h, PLUGIN_AMX_EXPORT_GetPublic, &hooks::amx_GetPublic);
 	register_amx_hook(amx_NumPublics_h, PLUGIN_AMX_EXPORT_NumPublics, &hooks::amx_NumPublics);
+	register_amx_hook(amx_FindPubVar_h, PLUGIN_AMX_EXPORT_FindPubVar, &hooks::amx_FindPubVar);
+	register_amx_hook(amx_GetPubVar_h, PLUGIN_AMX_EXPORT_GetPubVar, &hooks::amx_GetPubVar);
+	register_amx_hook(amx_NumPubVars_h, PLUGIN_AMX_EXPORT_NumPubVars, &hooks::amx_NumPubVars);
 	register_amx_hook(amx_FindTagId_h, PLUGIN_AMX_EXPORT_FindTagId, &hooks::amx_FindTagId);
 	register_amx_hook(amx_GetTag_h, PLUGIN_AMX_EXPORT_GetTag, &hooks::amx_GetTag);
 	register_amx_hook(amx_NumTags_h, PLUGIN_AMX_EXPORT_NumTags, &hooks::amx_NumTags);
@@ -259,6 +327,9 @@ void hooks::unload()
 	unregister_hook(amx_FindPublic_h);
 	unregister_hook(amx_GetPublic_h);
 	unregister_hook(amx_NumPublics_h);
+	unregister_hook(amx_FindPubVar_h);
+	unregister_hook(amx_GetPubVar_h);
+	unregister_hook(amx_NumPubVars_h);
 	unregister_hook(amx_FindTagId_h);
 	unregister_hook(amx_GetTag_h);
 	unregister_hook(amx_NumTags_h);

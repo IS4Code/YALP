@@ -157,6 +157,9 @@
     <ClCompile Include="src\lua\interop\sleep.cpp">
       <Filter>src\lua\interop</Filter>
     </ClCompile>
+    <ClCompile Include="src\lua\interop\pubvar.cpp">
+      <Filter>src\lua\interop</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\subhook\subhook.h">
@@ -337,6 +340,9 @@
       <Filter>src\lua</Filter>
     </ClInclude>
     <ClInclude Include="src\lua\interop\sleep.h">
+      <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lua\interop\pubvar.h">
       <Filter>src\lua\interop</Filter>
     </ClInclude>
   </ItemGroup>
