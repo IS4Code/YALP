@@ -41,9 +41,14 @@ int asoffset(lua_State *L)
 	return 1;
 }
 
-int aspointer(lua_State *L)
+int ashandle(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
+	if(!ptr)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
 	lua_pushlightuserdata(L, ptr);
 	return 1;
 }
@@ -62,6 +67,6 @@ void lua::interop::init_result(lua_State *L, AMX *amx)
 	lua_setfield(L, table, "asfloat");
 	lua_pushcfunction(L, asoffset);
 	lua_setfield(L, table, "asoffset");
-	lua_pushcfunction(L, aspointer);
-	lua_setfield(L, table, "aspointer");
+	lua_pushcfunction(L, ashandle);
+	lua_setfield(L, table, "ashandle");
 }
