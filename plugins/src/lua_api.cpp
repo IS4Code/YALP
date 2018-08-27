@@ -1,4 +1,5 @@
 #include "lua_api.h"
+#include "lua_utils.h"
 #include "lua/timer.h"
 #include "lua/interop.h"
 #include "lua/remote.h"
@@ -50,6 +51,25 @@ int take(lua_State *L)
 	return numrets;
 }
 
+int bind(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_pushinteger(L, lua_gettop(L));
+	lua_insert(L, 1);
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		int num = lua_tointeger(L, lua_upvalueindex(1));
+		for(int i = 0; i < num; i++)
+		{
+			lua_pushvalue(L, lua_upvalueindex(2 + i));
+		}
+		lua_rotate(L, 1, num);
+		lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
+		return lua_gettop(L);
+	}, lua_gettop(L));
+	return 1;
+}
+
 int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -57,6 +77,8 @@ int open_base(lua_State *L)
 	lua_setfield(L, -2, "print");
 	lua_pushcfunction(L, take);
 	lua_setfield(L, -2, "take");
+	lua_pushcfunction(L, bind);
+	lua_setfield(L, -2, "bind");
 	return 1;
 }
 
