@@ -64,8 +64,7 @@ int bind(lua_State *L)
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
 		}
 		lua_rotate(L, 1, num);
-		lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
-		return lua_gettop(L);
+		return lua::tailcall(L, lua_gettop(L) - 1);
 	}, lua_gettop(L));
 	return 1;
 }
@@ -109,8 +108,7 @@ int async(lua_State *L)
 				lua_xmove(thread, L, num);
 				lua_pushvalue(L, lua_upvalueindex(2));
 				lua_insert(L, 2);
-				lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
-				return lua_gettop(L);
+				return lua::tailcall(L, lua_gettop(L) - 1);
 			default:
 				lua_xmove(thread, L, 1);
 				return lua_error(L);
@@ -119,8 +117,7 @@ int async(lua_State *L)
 	lua_insert(L, 1);
 	lua_pushvalue(L, 1);
 	lua_setupvalue(L, 1, 2);
-	lua_call(L, lua_gettop(L) - 1, lua::numresults(L));
-	return lua_gettop(L);
+	return lua::tailcall(L, lua_gettop(L) - 1);
 }
 
 int open_base(lua_State *L)

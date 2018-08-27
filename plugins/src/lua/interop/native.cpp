@@ -164,8 +164,7 @@ int __call(lua_State *L)
 				{
 					lua_pushvalue(L, 1);
 					lua_insert(L, top);
-					lua_call(L, lua_gettop(L) - top, lua::numresults(L));
-					return lua_gettop(L) - top + 1;
+					return lua::tailcall(L, lua_gettop(L) - top);
 				});
 			}else{
 				return lua_yield(L, 2);
@@ -181,9 +180,7 @@ int __call(lua_State *L)
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
 			if(castresult)
 			{
-				int top = lua_gettop(L) - 2;
-				lua_call(L, 1, lua::numresults(L));
-				return lua_gettop(L) - top;
+				return lua::tailcall(L, 1);
 			}
 			return 1;
 		}

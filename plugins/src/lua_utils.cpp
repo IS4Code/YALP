@@ -165,3 +165,10 @@ bool lua::checkboolean(lua_State *L, int arg)
 	luaL_checktype(L, arg, LUA_TBOOLEAN);
 	return lua_toboolean(L, arg);
 }
+
+int lua::tailcall(lua_State *L, int n)
+{
+	int top = lua_gettop(L) - n - 1;
+	lua_call(L, n, lua::numresults(L));
+	return lua_gettop(L) - top;
+}
