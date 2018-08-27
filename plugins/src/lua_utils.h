@@ -119,6 +119,7 @@ namespace lua
 	bool checkboolean(lua_State *L, int arg);
 
 	int tailcall(lua_State *L, int n);
+	int tailcall(lua_State *L, int n, int r);
 }
 
 #endif

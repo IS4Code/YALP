@@ -168,7 +168,15 @@ bool lua::checkboolean(lua_State *L, int arg)
 
 int lua::tailcall(lua_State *L, int n)
 {
+	return lua::tailcall(L, n, lua::numresults(L));
+}
+
+int lua::tailcall(lua_State *L, int n, int r)
+{
 	int top = lua_gettop(L) - n - 1;
-	lua_call(L, n, lua::numresults(L));
+	lua_callk(L, n, r, top, [](lua_State *L, int status, lua_KContext top)
+	{
+		return lua_gettop(L) - top;
+	});
 	return lua_gettop(L) - top;
 }
