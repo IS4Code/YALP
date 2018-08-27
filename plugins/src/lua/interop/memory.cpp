@@ -427,6 +427,78 @@ int heapargs(lua_State *L)
 	return args;
 }
 
+int vacall(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_pushinteger(L, lua_gettop(L) - 1);
+	lua_rotate(L, 1, 2);
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+		auto hdr = (AMX_HEADER*)amx->base;
+		auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
+		cell old_hea = amx->hea;
+		auto heap = reinterpret_cast<cell*>(data + amx->hea);
+
+		int args = lua_gettop(L);
+		for(int i = 1; i <= args; i++)
+		{
+			if(amx->hea + STKMARGIN > amx->stk)
+			{
+				return lua::amx_error(L, AMX_ERR_STACKERR);
+			}
+
+			cell value = 0;
+			
+			if(lua_isinteger(L, i))
+			{
+				value = (cell)lua_tointeger(L, i);
+			}else if(lua_isnumber(L, i))
+			{
+				float num = (float)lua_tonumber(L, i);
+				value = amx_ftoc(num);
+			}else if(lua_isboolean(L, i))
+			{
+				value = lua_toboolean(L, i);
+			}else if(lua_islightuserdata(L, i))
+			{
+				value = reinterpret_cast<cell>(lua_touserdata(L, i));
+			}else{
+				continue;
+			}
+
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(amx->hea));
+			*(heap++) = value;
+			amx->hea += sizeof(cell);
+
+			lua_replace(L, i);
+		}
+
+		int num = (int)lua_tointeger(L, lua_upvalueindex(2));
+		for(int i = 1; i <= num; i++)
+		{
+			lua_pushvalue(L, lua_upvalueindex(2 + i));
+		}
+		lua_rotate(L, 1, num);
+		lua_KFunction cont = [](lua_State *L, int status, lua_KContext old_hea)
+		{
+			auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+			amx->hea = old_hea;
+			switch(status)
+			{
+				case LUA_OK:
+				case LUA_YIELD:
+					return lua_gettop(L);
+				default:
+					return lua_error(L);
+			}
+		};
+		return cont(L, lua_pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, old_hea, cont), old_hea);
+	}, lua_gettop(L));
+	return 1;
+}
+
 void lua::interop::init_memory(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -521,6 +593,10 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	lua_pushlightuserdata(L, amx);
 	lua_pushcclosure(L, heapargs, 1);
 	lua_setfield(L, table, "heapargs");
+
+	lua_pushlightuserdata(L, amx);
+	lua_pushcclosure(L, vacall, 1);
+	lua_setfield(L, table, "vacall");
 
 	lua_settop(L, table);
 }
