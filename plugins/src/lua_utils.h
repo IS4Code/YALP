@@ -84,7 +84,7 @@ namespace lua
 		newuserdata<Type>(L) = val;
 	}
 
-	template <class Type, class=std::enable_if<!std::is_lvalue_reference<T>::value>::type>
+	template <class Type, class=std::enable_if<!std::is_lvalue_reference<Type>::value>::type>
 	void pushuserdata(lua_State *L, Type &&val)
 	{
 		newuserdata<typename std::remove_reference<Type>::type>(L) = std::move(val);
