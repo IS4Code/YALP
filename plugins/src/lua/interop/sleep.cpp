@@ -2,6 +2,8 @@
 #include "lua_utils.h"
 #include "amxutils.h"
 
+#include <cstdlib>
+
 int sleep(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -68,6 +70,13 @@ void lua::interop::handle_sleep(lua_State *L, AMX *amx, int contlist)
 	{
 		if(lua_getfield(L, -2, "__cont") == LUA_TFUNCTION)
 		{
+			lua_createtable(L, 2, 0);
+			lua_insert(L, -2);
+			lua_rawseti(L, -2, 1);
+			int cookie = std::rand();
+			lua_pushinteger(L, cookie);
+			lua_rawseti(L, -2, 2);
+			amx->alt = cookie;
 			amx->cip = luaL_ref(L, -2);
 		}else{
 			lua_pop(L, 1);

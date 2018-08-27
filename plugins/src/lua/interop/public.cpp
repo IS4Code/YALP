@@ -225,12 +225,33 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 				int tt = cont ? lua_rawgeti(L, LUA_REGISTRYINDEX, info->contlist) : lua_rawgeti(L, -1, index);
 				if(tt == LUA_TTABLE)
 				{
-					if(lua_rawgeti(L, -1, cont ? amx->cip : 1) == LUA_TFUNCTION)
+					if(cont)
 					{
-						if(cont)
+						tt = lua_rawgeti(L, -1, amx->cip);
+						if(tt == LUA_TTABLE)
 						{
-							luaL_unref(L, -2, amx->cip);
+							tt = lua_rawgeti(L, -1, 1);
+							if(tt == LUA_TFUNCTION)
+							{
+								lua_rawgeti(L, -2, 2);
+								auto cookie = lua_tointeger(L, -1);
+								lua_pop(L, 1);
+								if(amx->alt != cookie)
+								{
+									tt = LUA_TNIL;
+								}else{
+									luaL_unref(L, -3, amx->cip);
+								}
+								lua_remove(L, -2);
+							}
+						}else{
+							tt = LUA_TNIL;
 						}
+					}else{
+						tt = lua_rawgeti(L, -1, 1);
+					}
+					if(tt == LUA_TFUNCTION)
+					{
 						auto hdr = (AMX_HEADER*)amx->base;
 						auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 						auto stk = reinterpret_cast<cell*>(data + amx->stk);
@@ -322,6 +343,15 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 					lua_pop(L, 1);
 				}
 				lua_pop(L, cont ? 1 : 2);
+			}
+			if(cont)
+			{
+				if(index == 0)
+				{
+					logprintf("warning: no continuation was saved");
+				}else{
+					logprintf("warning: continuation cannot be found (incorrectly saved or restored by the host)");
+				}
 			}
 			result = amx->error = AMX_ERR_INDEX;
 			return true;
