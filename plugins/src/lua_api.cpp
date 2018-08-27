@@ -70,6 +70,20 @@ int bind(lua_State *L)
 	return 1;
 }
 
+int clear(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TTABLE);
+	lua_pushnil(L);
+	while(lua_next(L, 1))
+	{
+		lua_pop(L, 1);
+		lua_pushvalue(L, -1);
+		lua_pushnil(L);
+		lua_settable(L, 1);
+	}
+	return 0;
+}
+
 int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -82,11 +96,19 @@ int open_base(lua_State *L)
 	return 1;
 }
 
+int open_table(lua_State *L)
+{
+	luaopen_table(L);
+	lua_pushcfunction(L, clear);
+	lua_setfield(L, -2, "clear");
+	return 1;
+}
+
 std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{"_G", open_base},
 	{LUA_LOADLIBNAME, luaopen_package},
 	{LUA_COLIBNAME, luaopen_coroutine},
-	{LUA_TABLIBNAME, luaopen_table},
+	{LUA_TABLIBNAME, open_table},
 	{LUA_IOLIBNAME, luaopen_io},
 	{LUA_OSLIBNAME, luaopen_os},
 	{LUA_STRLIBNAME, luaopen_string},
