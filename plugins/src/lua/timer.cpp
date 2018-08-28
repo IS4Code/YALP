@@ -1,5 +1,6 @@
 #include "timer.h"
 #include "lua_utils.h"
+#include "lua_api.h"
 
 #include <utility>
 #include <chrono>
@@ -103,8 +104,10 @@ int settimer(lua_State *L)
 		{
 			lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
 			luaL_unref(L, LUA_REGISTRYINDEX, ref);
-			if(lua_pcall(L, 0, 0, 0) != LUA_OK)
+			int err = lua_pcall(L, 0, 0, 0);
+			if(err != LUA_OK)
 			{
+				lua::report_error(L, err);
 				lua_pop(L, 1);
 			}
 		}
