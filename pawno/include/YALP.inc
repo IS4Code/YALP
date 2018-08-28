@@ -9,6 +9,8 @@
 #endif
 #define _YALP_included
 
+#include <file>
+
 enum lua_lib (<<= 1)
 {
     lua_lib_base = 1,

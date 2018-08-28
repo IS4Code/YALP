@@ -1,0 +1,18 @@
+{
+    "user": "IllidanS4",
+    "repo": "YALP",
+    "include_path": "pawno/include",
+    "dependencies": ["sampctl/pawn-stdlib"],
+    "resources": [
+        {
+            "name": "YALP.dll",
+            "platform": "windows",
+            "archive": false
+        },
+        {
+            "name": "YALP.so",
+            "platform": "linux",
+            "archive": false
+        }
+    ]
+}
