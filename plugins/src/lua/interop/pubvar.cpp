@@ -182,7 +182,7 @@ bool lua::interop::amx_get_pubvar(AMX *amx, int index, char *varname, cell *amx_
 				auto L = info->L;
 				if(getpubvarlist(L, info->pubvarlist))
 				{
-					if(lua_rawgeti(L, -1, index) == LUA_TTABLE)
+					if(lua_rawgeti(L, -1, index + 1) == LUA_TTABLE)
 					{
 						if(amx_addr)
 						{

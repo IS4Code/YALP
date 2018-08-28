@@ -116,6 +116,7 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 								lua_rawseti(L, -2, 1);
 								lua_pop(L, 2);
 								error = AMX_ERR_NONE;
+								(*index)--;
 								return true;
 							}
 							lua_pop(L, 1);
@@ -130,6 +131,7 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 							lua_setfield(L, -2, funcname);
 							lua_pop(L, 1);
 							error = AMX_ERR_NONE;
+							(*index)--;
 							return true;
 						}
 						lua_pop(L, 1);
@@ -169,7 +171,7 @@ bool lua::interop::amx_get_public(AMX *amx, int index, char *funcname)
 				auto L = info->L;
 				if(getpubliclist(L, info->publiclist))
 				{
-					if(lua_rawgeti(L, -1, index) == LUA_TTABLE)
+					if(lua_rawgeti(L, -1, index + 1) == LUA_TTABLE)
 					{
 						if(lua_rawgeti(L, -1, 2) == LUA_TSTRING)
 						{
@@ -221,7 +223,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 			bool cont = index == AMX_EXEC_CONT;
 			if(cont || getpubliclist(L, info->publiclist))
 			{
-				int tt = cont ? lua_rawgeti(L, LUA_REGISTRYINDEX, info->contlist) : lua_rawgeti(L, -1, index);
+				int tt = cont ? lua_rawgeti(L, LUA_REGISTRYINDEX, info->contlist) : lua_rawgeti(L, -1, index + 1);
 				if(tt == LUA_TTABLE)
 				{
 					if(cont)
@@ -345,7 +347,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 			}
 			if(cont)
 			{
-				if(index == 0)
+				if(amx->cip == 0)
 				{
 					logprintf("warning: no continuation was saved");
 				}else{
