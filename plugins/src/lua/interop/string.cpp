@@ -81,6 +81,14 @@ int setstring(lua_State *L)
 	return 0;
 }
 
+int asstring(lua_State *L)
+{
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_pushvalue(L, lua_upvalueindex(2));
+	lua_rotate(L, 1, 2);
+	return lua::tailcall(L, lua_gettop(L) - 1);
+}
+
 void lua::interop::init_string(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -90,4 +98,9 @@ void lua::interop::init_string(lua_State *L, AMX *amx)
 
 	lua_pushcfunction(L, setstring);
 	lua_setfield(L, table, "setstring");
+
+	lua_getfield(L, table, "getstring");
+	lua_getfield(L, table, "heap");
+	lua_pushcclosure(L, asstring, 2);
+	lua_setfield(L, table, "asstring");
 }
