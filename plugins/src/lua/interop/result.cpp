@@ -1,6 +1,12 @@
 #include "result.h"
 #include "lua_utils.h"
 
+int asnone(lua_State *L)
+{
+	lua::checklightudata(L, 1);
+	return 0;
+}
+
 int asnil(lua_State *L)
 {
 	lua::checklightudata(L, 1);
@@ -57,6 +63,8 @@ void lua::interop::init_result(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
 
+	lua_pushcfunction(L, asnone);
+	lua_setfield(L, table, "asnone");
 	lua_pushcfunction(L, asnil);
 	lua_setfield(L, table, "asnil");
 	lua_pushcfunction(L, asinteger);
