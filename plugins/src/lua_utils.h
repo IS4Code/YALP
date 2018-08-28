@@ -120,6 +120,10 @@ namespace lua
 
 	int tailcall(lua_State *L, int n);
 	int tailcall(lua_State *L, int n, int r);
+
+	typedef std::function<int(lua_State *L, int status)> KFunction;
+
+	int pcallk(lua_State *L, int nargs, int nresults, int errfunc, KFunction &&k);
 }
 
 #endif

@@ -180,3 +180,19 @@ int lua::tailcall(lua_State *L, int n, int r)
 	});
 	return lua_gettop(L) - top;
 }
+
+int lua::pcallk(lua_State *L, int nargs, int nresults, int errfunc, lua::KFunction &&k)
+{
+	if(errfunc != 0) errfunc = lua_absindex(L, errfunc);
+	int kpos = lua_absindex(L, -nargs - 1);
+	lua::pushuserdata(L, std::move(k));
+	lua_insert(L, kpos);
+	
+	lua_KFunction kc = [](lua_State *L, int status, lua_KContext kpos)
+	{
+		lua::KFunction k = std::move(lua::touserdata<lua::KFunction>(L, kpos));
+		lua_remove(L, kpos);
+		return k(L, status);
+	};
+	return kc(L, lua_pcallk(L, nargs, nresults, errfunc, kpos, kc), kpos);
+}

@@ -441,6 +441,10 @@ int vacall(lua_State *L)
 		cell old_hea = amx->hea;
 		auto heap = reinterpret_cast<cell*>(data + amx->hea);
 
+		bool restore = lua::numresults(L) != 0;
+
+		std::vector<void(*)(lua_State *L, cell value)> restorers;
+
 		int args = lua_gettop(L);
 		for(int i = 1; i <= args; i++)
 		{
@@ -454,16 +458,20 @@ int vacall(lua_State *L)
 			if(lua_isinteger(L, i))
 			{
 				value = (cell)lua_tointeger(L, i);
+				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
 			}else if(lua_isnumber(L, i))
 			{
 				float num = (float)lua_tonumber(L, i);
 				value = amx_ftoc(num);
+				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushnumber(L, amx_ctof(value)); });
 			}else if(lua_isboolean(L, i))
 			{
 				value = lua_toboolean(L, i);
+				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushboolean(L, value); });
 			}else if(lua_islightuserdata(L, i))
 			{
 				value = reinterpret_cast<cell>(lua_touserdata(L, i));
+				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
 			}else{
 				continue;
 			}
@@ -481,20 +489,39 @@ int vacall(lua_State *L)
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
 		}
 		lua_rotate(L, 1, num);
-		lua_KFunction cont = [](lua_State *L, int status, lua_KContext old_hea)
+		return lua::pcallk(L, lua_gettop(L) - 1, restore ? LUA_MULTRET : 0, 0, [=, restorers{std::move(restorers)}](lua_State *L, int status)
 		{
-			auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+			int heapsize = (amx->hea - old_hea) / sizeof(cell);
 			amx->hea = old_hea;
 			switch(status)
 			{
 				case LUA_OK:
 				case LUA_YIELD:
+				{
+					int nr = lua::numresults(L);
+					if(nr == LUA_MULTRET)
+					{
+						nr = restorers.size();
+					}else{
+						nr -= lua_gettop(L);
+					}
+					if(nr > heapsize)
+					{
+						nr = heapsize;
+					}
+					auto heap = reinterpret_cast<cell*>(data + amx->hea);
+					for(int i = 0; i < nr; i++)
+					{
+						restorers[i](L, heap[i]);
+					}
 					return lua_gettop(L);
+				}
 				default:
+				{
 					return lua_error(L);
+				}
 			}
-		};
-		return cont(L, lua_pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, old_hea, cont), old_hea);
+		});
 	}, lua_gettop(L));
 	return 1;
 }
