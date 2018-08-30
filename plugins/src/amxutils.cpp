@@ -1,5 +1,8 @@
 #include "amxutils.h"
 
+#include <cstring>
+#include <stdlib.h>
+
 const char *amx::StrError(int errnum)
 {
 	static const char *messages[] = {
@@ -35,4 +38,64 @@ const char *amx::StrError(int errnum)
 	if(errnum < 0 || (size_t)errnum >= sizeof(messages) / sizeof(*messages))
 		return "(unknown)";
 	return messages[errnum];
+}
+
+std::string amx::GetString(const cell *source, size_t size)
+{
+	if(source == nullptr) return {};
+
+	std::string str;
+	if(static_cast<ucell>(*source) > UNPACKEDMAX)
+	{
+		cell c = 0;
+		int i = sizeof(cell) - 1;
+		while(true)
+		{
+			if(i == sizeof(cell) - 1)
+			{
+				c = *source++;
+				if(size-- == 0)
+				{
+					break;
+				}
+			}
+			char ch = c >> (i * 8);
+			if(ch == '\0') break;
+			str.push_back(ch);
+			i = (i + sizeof(cell) - 1) % sizeof(cell);
+		}
+	}else{
+		cell c;
+		while((c = *source++) != 0)
+		{
+			if(size-- == 0)
+			{
+				break;
+			}
+			str.push_back(c);
+		}
+	}
+	return str;
+}
+
+void amx::SetString(cell *dest, const char *source, size_t len, bool pack)
+{
+	if(!pack)
+	{
+		while(len-- > 0)
+		{
+			*dest++ = *source++;
+		}
+		*dest = 0;
+	}else{
+		dest[len / sizeof(cell)] = 0;
+		std::memcpy(dest, source, len);
+		len = (len + sizeof(cell) - 1) / sizeof(cell);
+
+		while(len-- > 0)
+		{
+			*dest = _byteswap_ulong(*dest);
+			dest++;
+		}
+	}
 }

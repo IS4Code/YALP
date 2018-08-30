@@ -1,5 +1,6 @@
 #include "native.h"
 #include "lua_utils.h"
+#include "amxutils.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -72,7 +73,7 @@ int __call(lua_State *L)
 			{
 				size_t len;
 				auto str = lua_tolstring(L, i, &len);
-				len++;
+				auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
 
 				if(amx->stk - amx->hea - len * sizeof(cell) < STKMARGIN)
 				{
@@ -81,11 +82,8 @@ int __call(lua_State *L)
 
 				value = amx->hea;
 				auto addr = reinterpret_cast<cell*>(data + amx->hea);
-				for(size_t j = 0; j < len; j++)
-				{
-					addr[j] = str[j];
-				}
-				amx->hea += len * sizeof(cell);
+				amx::SetString(addr, str, len, true);
+				amx->hea += dlen;
 			}else if(i == 1 && lua_isfunction(L, i))
 			{
 				castresult = true;

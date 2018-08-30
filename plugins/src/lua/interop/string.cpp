@@ -1,5 +1,6 @@
 #include "string.h"
 #include "lua_utils.h"
+#include "amxutils.h"
 
 int getstring(lua_State *L)
 {
@@ -29,20 +30,10 @@ int getstring(lua_State *L)
 		blen = (size_t)len;
 	}
 
-	std::string str;
-	for(size_t i = 0; i < blen; i++)
-	{
-		cell c = buf[i];
-		if(c == 0)
-		{
-			blen = i;
-			break;
-		}
-		str.push_back((char)c);
-	}
-	lua_pushlstring(L, str.data(), blen);
-	lua_pushinteger(L, blen);
-	return 2;
+
+	std::string str = amx::GetString(buf, blen);
+	lua_pushlstring(L, str.data(), str.size());
+	return 1;
 }
 
 int setstring(lua_State *L)
@@ -54,7 +45,8 @@ int setstring(lua_State *L)
 	{
 		return luaL_argerror(L, 1, "must be a buffer type");
 	}
-	auto str = luaL_checkstring(L, 2);
+	size_t slen;
+	auto str = luaL_checklstring(L, 2, &slen);
 	size_t offset = lua::checkoffset(L, 3);
 	lua_Integer len;
 	if(lua_isnil(L, 4) || lua_isnone(L, 4))
@@ -63,6 +55,8 @@ int setstring(lua_State *L)
 	}else{
 		len = luaL_checkinteger(L, 4);
 	}
+	
+	bool pack = luaL_opt(L, lua::checkboolean, 5, true);
 
 	ptr += offset;
 	blen -= offset;
@@ -74,10 +68,16 @@ int setstring(lua_State *L)
 		blen = (size_t)len;
 	}
 
-	for(size_t i = 0; i < blen; i++)
+	if(pack)
 	{
-		buf[i] = str[i];
+		blen *= sizeof(cell);
 	}
+	if(slen >= blen)
+	{
+		slen = blen - 1;
+	}
+
+	amx::SetString(buf, str, slen, pack);
 	return 0;
 }
 

@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "lua_utils.h"
+#include "amxutils.h"
 
 #include <vector>
 #include <cstring>
@@ -41,14 +42,11 @@ bool toblock(lua_State *L, int idx, const std::function<void*(lua_State*, size_t
 	{
 		size_t len;
 		auto str = lua_tolstring(L, idx, &len);
-		len++;
+		auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
 
-		auto addr = reinterpret_cast<cell*>(alloc(L, len * sizeof(cell)));
+		auto addr = reinterpret_cast<cell*>(alloc(L, dlen));
 		if(!addr) return false;
-		for(size_t i = 0; i < len; i++)
-		{
-			addr[i] = str[i];
-		}
+		amx::SetString(addr, str, len, true);
 		return true;
 	}else if(lua_islightuserdata(L, idx))
 	{
