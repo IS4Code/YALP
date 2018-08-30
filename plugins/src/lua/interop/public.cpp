@@ -286,7 +286,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							if(lua_isinteger(L, -1))
 							{
 								amx->pri = (cell)lua_tointeger(L, -1);
-							}else if(lua_isnumber(L, -1))
+							}else if(lua::isnumber(L, -1))
 							{
 								float num = (float)lua_tonumber(L, -1);
 								amx->pri = amx_ftoc(num);

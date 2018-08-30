@@ -14,7 +14,7 @@ int sleep(lua_State *L)
 	}else if(lua_isinteger(L, 2))
 	{
 		value = (cell)lua_tointeger(L, 2);
-	}else if(lua_isnumber(L, 2))
+	}else if(lua::isnumber(L, 2))
 	{
 		float num = (float)lua_tonumber(L, 2);
 		value = amx_ftoc(num);

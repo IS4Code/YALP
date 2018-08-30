@@ -62,7 +62,7 @@ int __call(lua_State *L)
 			if(lua_isinteger(L, i))
 			{
 				value = (cell)lua_tointeger(L, i);
-			}else if(lua_isnumber(L, i))
+			}else if(lua::isnumber(L, i))
 			{
 				float num = (float)lua_tonumber(L, i);
 				value = amx_ftoc(num);

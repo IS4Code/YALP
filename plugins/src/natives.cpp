@@ -90,7 +90,7 @@ namespace Natives
 			amx_RaiseError(amx, error);
 			return 0;
 		}
-
+		
 		int index;
 		error = amx_FindPublic(amx, reader, &index);
 		if(error != AMX_ERR_NONE)
@@ -196,6 +196,53 @@ namespace Natives
 		}
 		return retval;
 	}
+
+	static cell AMX_NATIVE_CALL lua_gettop(AMX *amx, cell *params)
+	{
+		auto L = reinterpret_cast<lua_State*>(params[1]);
+		return ::lua_gettop(L);
+	}
+
+	static cell AMX_NATIVE_CALL _lua_tostring(AMX *amx, cell *params)
+	{
+		auto L = reinterpret_cast<lua_State*>(params[1]);
+		int idx = lua_absindex(L, params[2]);
+		size_t len;
+		auto str = lua_tolstring(L, idx, &len);
+		bool pop = false;
+		if(!str)
+		{
+			if(lua_getglobal(L, "tostring") == LUA_TFUNCTION)
+			{
+				lua_pushvalue(L, idx);
+				lua_pcall(L, 1, 1, 0);
+				str = lua_tolstring(L, -1, &len);
+				pop = true;
+			}else{
+				str = luaL_typename(L, idx);
+				len = std::strlen(str);
+			}
+		}
+		
+		cell *addr;
+		amx_GetAddr(amx, params[3], &addr);
+
+		amx_SetString(addr, str, true, false, params[4]);
+
+		if(pop)
+		{
+			lua_pop(L, 1);
+		}
+
+		return len;
+	}
+
+	static cell AMX_NATIVE_CALL lua_settop(AMX *amx, cell *params)
+	{
+		auto L = reinterpret_cast<lua_State*>(params[1]);
+		::lua_settop(L, params[2]);
+		return 0;
+	}
 }
 
 static AMX_NATIVE_INFO native_list[] =
@@ -208,6 +255,9 @@ static AMX_NATIVE_INFO native_list[] =
 	{"lua_call", Natives::_lua_call},
 	AMX_DECLARE_NATIVE(lua_stackdump),
 	AMX_DECLARE_NATIVE(lua_loopback),
+	AMX_DECLARE_NATIVE(lua_gettop),
+	{"lua_tostring", Natives::_lua_tostring},
+	AMX_DECLARE_NATIVE(lua_settop),
 };
 
 int RegisterNatives(AMX *amx)

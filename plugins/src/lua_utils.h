@@ -124,6 +124,10 @@ namespace lua
 	typedef std::function<int(lua_State *L, int status)> KFunction;
 
 	int pcallk(lua_State *L, int nargs, int nresults, int errfunc, KFunction &&k);
+
+	bool isnumber(lua_State *L, int idx);
+
+	bool isstring(lua_State *L, int idx);
 }
 
 #endif

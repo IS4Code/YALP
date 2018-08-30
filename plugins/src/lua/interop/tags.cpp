@@ -48,7 +48,7 @@ bool getudatatag(lua_State *L, int idx, const char *&tagname)
 int tagof(lua_State *L)
 {
 	const char *tagname;
-	if(lua_type(L, 1) == LUA_TSTRING)
+	if(lua::isstring(L, 1))
 	{
 		tagname = lua_tostring(L, 1);
 	}else if(lua_isinteger(L, 1))
@@ -57,7 +57,7 @@ int tagof(lua_State *L)
 	}else if(lua_isboolean(L, 1))
 	{
 		tagname = "bool";
-	}else if(lua_isnumber(L, 1))
+	}else if(lua::isnumber(L, 1))
 	{
 		tagname = "Float";
 	}else if(!getudatatag(L, 1, tagname))

@@ -31,7 +31,7 @@ bool toblock(lua_State *L, int idx, const std::function<void*(lua_State*, size_t
 	if(lua_isinteger(L, idx))
 	{
 		value = (cell)lua_tointeger(L, idx);
-	}else if(lua_isnumber(L, idx))
+	}else if(lua_type(L, idx) == LUA_TNUMBER)
 	{
 		float num = (float)lua_tonumber(L, idx);
 		value = amx_ftoc(num);
@@ -121,7 +121,7 @@ int buffer_newindex(lua_State *L)
 	if(lua_isinteger(L, 3))
 	{
 		value = (cell)lua_tointeger(L, 3);
-	}else if(lua_isnumber(L, 3))
+	}else if(lua::isnumber(L, 3))
 	{
 		float num = (float)lua_tonumber(L, 3);
 		value = amx_ftoc(num);
@@ -457,7 +457,7 @@ int vacall(lua_State *L)
 			{
 				value = (cell)lua_tointeger(L, i);
 				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
-			}else if(lua_isnumber(L, i))
+			}else if(lua::isnumber(L, i))
 			{
 				float num = (float)lua_tonumber(L, i);
 				value = amx_ftoc(num);

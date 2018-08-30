@@ -21,7 +21,7 @@ struct lua_handle
 int reg(lua_State *L)
 {
 	auto ptr = lua_topointer(L, 1);
-	if(!ptr && lua_type(L, 1) == LUA_TSTRING)
+	if(!ptr && lua::isstring(L, 1))
 	{
 		ptr = lua_tostring(L, 1);
 	}

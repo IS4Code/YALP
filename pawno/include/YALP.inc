@@ -38,6 +38,9 @@ native lua_load(Lua:L, const reader[], data, bufsize=-1, chunkname[]="");
 native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 native lua_call(Lua:L, nargs, nresults);
 native lua_stackdump(Lua:L, depth=-1);
+native lua_gettop(Lua:L);
+native lua_settop(Lua:L, top);
+native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer));
 
 stock lua_dofile(Lua:L, const name[], bufsize=-1)
 {

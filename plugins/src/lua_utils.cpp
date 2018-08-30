@@ -196,3 +196,13 @@ int lua::pcallk(lua_State *L, int nargs, int nresults, int errfunc, lua::KFuncti
 	};
 	return kc(L, lua_pcallk(L, nargs, nresults, errfunc, kpos, kc), kpos);
 }
+
+bool lua::isnumber(lua_State *L, int idx)
+{
+	return lua_type(L, idx) == LUA_TNUMBER;
+}
+
+bool lua::isstring(lua_State *L, int idx)
+{
+	return lua_type(L, idx) == LUA_TSTRING;
+}
