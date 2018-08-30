@@ -5,6 +5,7 @@
 #include "lua/remote.h"
 #include "main.h"
 #include <vector>
+#include <memory>
 #include <unordered_map>
 
 static int custom_print(lua_State *L)
@@ -214,25 +215,27 @@ void lua::report_error(lua_State *L, int error)
 }
 
 std::unordered_map<AMX*, lua_State*> bind_map;
-std::unordered_map<lua_State*, AMX*> init_map;
+std::unordered_map<lua_State*, std::weak_ptr<AMX*>> init_map;
 
 cell lua::init_bind(lua_State *L, AMX *amx)
 {
 	if(!lua_isfunction(L, -1)) return 0;
+	auto it = init_map.find(L);
+	if(it != init_map.end() && !it->second.expired()) return 0;
 	bind_map[amx] = L;
 	return 0xFFC52116;
 }
 
-bool lua::bind(AMX *amx)
+int lua::bind(AMX *amx, cell *retval, int index)
 {
 	if(amx->pri != 0xFFC52116)
 	{
-		return false;
+		return AMX_ERR_SLEEP;
 	}
 	auto it = bind_map.find(amx);
 	if(it == bind_map.end())
 	{
-		return false;
+		return AMX_ERR_SLEEP;
 	}
 	auto L = it->second;
 	bind_map.erase(it);
@@ -243,14 +246,30 @@ bool lua::bind(AMX *amx)
 	amx->reset_hea = amx->hea = amx->hlw = 0;
 	amx->cip = 0;
 
-	init_map[L] = amx;
-	lua_call(L, 0, 0);
-	return true;
+	auto ptr = std::make_shared<AMX*>(amx);
+	init_map[L] = ptr;
+	lua::pushuserdata(L, std::move(ptr));
+	luaL_ref(L, LUA_REGISTRYINDEX);
+	int error = lua_pcall(L, 0, -1, 0);
+	if(error != LUA_OK)
+	{
+		lua::report_error(L, error);
+	}
+	lua_settop(L, 0);
+	return AMX_ERR_SLEEP;
 }
 
 AMX *lua::bound_amx(lua_State *L)
 {
 	auto it = init_map.find(L);
-	if(it != init_map.end()) return it->second;
+	if(it != init_map.end())
+	{
+		if(auto lock = it->second.lock())
+		{
+			return *lock;
+		}else{
+			init_map.erase(it);
+		}
+	}
 	return nullptr;
 }

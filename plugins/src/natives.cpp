@@ -251,6 +251,8 @@ namespace Natives
 		if(ret)
 		{
 			amx_RaiseError(amx, AMX_ERR_SLEEP);
+		}else{
+			amx_RaiseError(amx, AMX_ERR_NATIVE);
 		}
 		return ret;
 	}

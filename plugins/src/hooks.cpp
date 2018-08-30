@@ -180,7 +180,7 @@ namespace hooks
 		int error = amx_ExecOrig(amx, retval, index);
 		if(error == AMX_ERR_SLEEP)
 		{
-			lua::bind(amx);
+			return lua::bind(amx, retval, index);
 		}
 		return error;
 	}
