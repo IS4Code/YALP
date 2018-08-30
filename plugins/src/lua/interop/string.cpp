@@ -11,13 +11,19 @@ int getstring(lua_State *L)
 	{
 		return luaL_argerror(L, 1, "must be a buffer type");
 	}
-	size_t offset = lua::checkoffset(L, 2);
+	ptrdiff_t offset = lua::checkoffset(L, 2);
 	lua_Integer len;
 	if(lua_isnil(L, 3) || lua_isnone(L, 3))
 	{
 		len = -1;
 	}else{
 		len = luaL_checkinteger(L, 3);
+	}
+
+	if(offset < 0 || (size_t)offset >= blen)
+	{
+		lua_pushnil(L);
+		return 1;
 	}
 
 	ptr += offset;
@@ -47,7 +53,7 @@ int setstring(lua_State *L)
 	}
 	size_t slen;
 	auto str = luaL_checklstring(L, 2, &slen);
-	size_t offset = lua::checkoffset(L, 3);
+	ptrdiff_t offset = lua::checkoffset(L, 3);
 	lua_Integer len;
 	if(lua_isnil(L, 4) || lua_isnone(L, 4))
 	{
@@ -57,6 +63,11 @@ int setstring(lua_State *L)
 	}
 	
 	bool pack = luaL_opt(L, lua::checkboolean, 5, true);
+
+	if(offset < 0 || (size_t)offset >= blen)
+	{
+		return 0;
+	}
 
 	ptr += offset;
 	blen -= offset;

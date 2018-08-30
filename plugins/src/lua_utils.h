@@ -94,7 +94,7 @@ namespace lua
 
 	void *tobuffer(lua_State *L, int idx, size_t &length, bool &isconst);
 
-	size_t checkoffset(lua_State *L, int idx);
+	ptrdiff_t checkoffset(lua_State *L, int idx);
 
 	void *checklightudata(lua_State *L, int idx);
 

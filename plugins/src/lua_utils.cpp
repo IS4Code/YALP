@@ -88,19 +88,19 @@ void *lua::tobuffer(lua_State *L, int idx, size_t &length, bool &isconst)
 	return nullptr;
 }
 
-size_t lua::checkoffset(lua_State *L, int idx)
+ptrdiff_t lua::checkoffset(lua_State *L, int idx)
 {
 	if(lua_isinteger(L, idx))
 	{
-		return (size_t)(lua_tointeger(L, idx) - 1) * sizeof(cell);
+		return (ptrdiff_t)(lua_tointeger(L, idx) - 1) * sizeof(cell);
 	}else if(lua_islightuserdata(L, idx))
 	{
-		return reinterpret_cast<size_t>(lua_touserdata(L, idx));
+		return reinterpret_cast<ptrdiff_t>(lua_touserdata(L, idx));
 	}else if(lua_isnil(L, idx) || lua_isnone(L, idx))
 	{
 		return 0;
 	}else{
-		return (size_t)luaL_argerror(L, idx, "type not expected");
+		return (ptrdiff_t)luaL_argerror(L, idx, "type not expected");
 	}
 }
 

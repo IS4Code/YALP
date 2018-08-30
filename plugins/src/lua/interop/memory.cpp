@@ -98,7 +98,7 @@ int buffer_len(lua_State *L)
 
 int buffer_index(lua_State *L)
 {
-	size_t index = lua::checkoffset(L, 2);
+	ptrdiff_t index = lua::checkoffset(L, 2);
 	size_t len;
 	bool isconst;
 	if(auto ptr = reinterpret_cast<char*>(lua::tobuffer(L, 1, len, isconst)))
@@ -116,7 +116,7 @@ int buffer_index(lua_State *L)
 
 int buffer_newindex(lua_State *L)
 {
-	size_t index = lua::checkoffset(L, 2);
+	ptrdiff_t index = lua::checkoffset(L, 2);
 	cell value;
 	if(lua_isinteger(L, 3))
 	{
@@ -226,7 +226,7 @@ int span(lua_State *L)
 	{
 		return luaL_argerror(L, 1, "must be a buffer type");
 	}
-	size_t offset = lua::checkoffset(L, 2);
+	ptrdiff_t offset = lua::checkoffset(L, 2);
 	lua_Integer len;
 	if(lua_isnil(L, 3) || lua_isnone(L, 3))
 	{
@@ -238,8 +238,8 @@ int span(lua_State *L)
 
 	if(offset < 0)
 	{
-		len += offset;
-		offset = 0;
+		lua_pushnil(L);
+		return 1;
 	}
 
 	lua_newtable(L);
