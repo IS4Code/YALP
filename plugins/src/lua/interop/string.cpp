@@ -37,7 +37,7 @@ int getstring(lua_State *L)
 	}
 
 
-	std::string str = amx::GetString(buf, blen);
+	std::string str = amx::GetString(buf, blen, true);
 	lua_pushlstring(L, str.data(), str.size());
 	return 1;
 }
@@ -94,10 +94,19 @@ int setstring(lua_State *L)
 
 int asstring(lua_State *L)
 {
-	lua_pushvalue(L, lua_upvalueindex(1));
-	lua_pushvalue(L, lua_upvalueindex(2));
-	lua_rotate(L, 1, 2);
-	return lua::tailcall(L, lua_gettop(L) - 1);
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto ptr = lua::checklightudata(L, 1);
+	cell *addr;
+	int len;
+	if(amx_GetAddr(amx, reinterpret_cast<cell>(ptr), &addr) != AMX_ERR_NONE || amx_StrLen(addr, &len) != AMX_ERR_NONE)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+
+	std::string str = amx::GetString(addr, (size_t)len, len < 0 ? true : false);
+	lua_pushlstring(L, str.data(), str.size());
+	return 1;
 }
 
 void lua::interop::init_string(lua_State *L, AMX *amx)
@@ -110,8 +119,7 @@ void lua::interop::init_string(lua_State *L, AMX *amx)
 	lua_pushcfunction(L, setstring);
 	lua_setfield(L, table, "setstring");
 
-	lua_getfield(L, table, "getstring");
-	lua_getfield(L, table, "heap");
-	lua_pushcclosure(L, asstring, 2);
+	lua_pushlightuserdata(L, amx);
+	lua_pushcclosure(L, asstring, 1);
 	lua_setfield(L, table, "asstring");
 }

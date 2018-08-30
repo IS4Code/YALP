@@ -518,6 +518,33 @@ int vacall(lua_State *L)
 	return 1;
 }
 
+int asbuffer(lua_State *L)
+{
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto ptr = lua::checklightudata(L, 1);
+	cell *addr;
+	int len;
+	if(amx_GetAddr(amx, reinterpret_cast<cell>(ptr), &addr) != AMX_ERR_NONE || amx_StrLen(addr, &len) != AMX_ERR_NONE)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+
+	size_t dlen;
+	if(static_cast<ucell>(*addr) > UNPACKEDMAX)
+	{
+		dlen = ((len + sizeof(cell) - 1) / sizeof(cell)) * sizeof(cell);
+	}else{
+		dlen = len * sizeof(cell);
+	}
+
+	auto buf = lua_newuserdata(L, dlen);
+	std::memcpy(buf, addr, dlen);
+	lua_pushvalue(L, lua_upvalueindex(2));
+	lua_setmetatable(L, -2);
+	return 1;
+}
+
 void lua::interop::init_memory(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -568,7 +595,12 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	lua_pushcclosure(L, ::tobuffer, 2);
 	lua_setfield(L, table, "tocbuffer");
 
-	lua::pushuserdata(L, amx);
+	lua_pushlightuserdata(L, amx);
+	lua_pushvalue(L, buffer);
+	lua_pushcclosure(L, asbuffer, 2);
+	lua_setfield(L, table, "asbuffer");
+
+	lua::pushuserdata(L, amx); //do not change to lightuserdata
 
 	lua_createtable(L, 0, 6);
 	lua_pushstring(L, "heap");
@@ -616,6 +648,6 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	lua_pushlightuserdata(L, amx);
 	lua_pushcclosure(L, vacall, 1);
 	lua_setfield(L, table, "vacall");
-
+	
 	lua_settop(L, table);
 }

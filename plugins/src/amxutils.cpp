@@ -40,7 +40,7 @@ const char *amx::StrError(int errnum)
 	return messages[errnum];
 }
 
-std::string amx::GetString(const cell *source, size_t size)
+std::string amx::GetString(const cell *source, size_t size, bool cstring)
 {
 	if(source == nullptr) return {};
 
@@ -60,18 +60,20 @@ std::string amx::GetString(const cell *source, size_t size)
 				}
 			}
 			char ch = c >> (i * 8);
-			if(ch == '\0') break;
+			if(cstring && ch == '\0') break;
 			str.push_back(ch);
 			i = (i + sizeof(cell) - 1) % sizeof(cell);
 		}
 	}else{
 		cell c;
-		while((c = *source++) != 0)
+		while(true)
 		{
+			c = *source++;
 			if(size-- == 0)
 			{
 				break;
 			}
+			if(cstring && c == 0) break;
 			str.push_back(c);
 		}
 	}
