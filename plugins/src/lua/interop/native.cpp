@@ -8,7 +8,7 @@
 
 constexpr cell STKMARGIN = 16 * sizeof(cell);
 
-static std::unordered_map<AMX*, std::weak_ptr<struct amx_native_info>> amx_map;
+static std::unordered_map<AMX*, std::shared_ptr<struct amx_native_info>> amx_map;
 static std::unordered_set<cell> addr_set;
 
 struct amx_native_info
@@ -19,15 +19,6 @@ struct amx_native_info
 	amx_native_info(AMX *amx) : amx(amx)
 	{
 
-	}
-
-	~amx_native_info()
-	{
-		if(amx)
-		{
-			amx_map.erase(amx);
-			amx = nullptr;
-		}
 	}
 };
 
@@ -118,7 +109,7 @@ int __call(lua_State *L)
 				{
 					continue;
 				}
-				return lua::argerrortype(L, i, "simple type");
+				return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 			}
 				
 			amx->stk -= sizeof(cell);
@@ -217,14 +208,17 @@ int native_index(lua_State *L)
 void lua::interop::init_native(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
-
-	auto info = std::make_shared<amx_native_info>(amx);
-	amx_map[amx] = info;
+	
+	auto it = amx_map.find(amx);
+	if(it == amx_map.end())
+	{
+		it = amx_map.insert(std::make_pair(amx, std::make_shared<amx_native_info>(amx))).first;
+	}
 
 	lua_newtable(L);
 	lua_createtable(L, 0, 1);
 
-	lua::pushuserdata(L, info);
+	lua::pushuserdata(L, it->second);
 	lua_getfield(L, table, "sleep");
 	lua_pushcclosure(L, getnative, 2);
 	lua_pushvalue(L, -1);
@@ -238,15 +232,14 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 void lua::interop::amx_register_natives(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)
 {
 	auto it = amx_map.find(amx);
-	if(it != amx_map.end())
+	if(it == amx_map.end())
 	{
-		if(auto info = it->second.lock())
-		{
-			for(int i = 0; nativelist[i].name != nullptr && (i < number || number == -1); i++)
-			{
-				info->natives.insert(std::make_pair(nativelist[i].name, nativelist[i].func));
-			}
-		}
+		it = amx_map.insert(std::make_pair(amx, std::make_shared<amx_native_info>(amx))).first;
+	}
+	auto &info = *it->second;
+	for(int i = 0; nativelist[i].name != nullptr && (i < number || number == -1); i++)
+	{
+		info.natives.insert(std::make_pair(nativelist[i].name, nativelist[i].func));
 	}
 }
 
@@ -260,4 +253,13 @@ bool lua::interop::amx_get_param_addr(AMX *amx, cell amx_addr, cell **phys_addr)
 		return true;
 	}
 	return false;
+}
+
+void lua::interop::amx_unregister_natives(AMX *amx)
+{
+	auto it = amx_map.find(amx);
+	if(it != amx_map.end())
+	{
+		amx_map.erase(it);
+	}
 }

@@ -1,5 +1,6 @@
 #include "hooks.h"
 #include "main.h"
+#include "lua_api.h"
 #include "lua/interop.h"
 #include "lua/interop/native.h"
 #include "lua/interop/public.h"
@@ -176,7 +177,12 @@ namespace hooks
 		{
 			return result;
 		}
-		return amx_ExecOrig(amx, retval, index);
+		int error = amx_ExecOrig(amx, retval, index);
+		if(error == AMX_ERR_SLEEP)
+		{
+			lua::bind(amx);
+		}
+		return error;
 	}
 
 	int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)

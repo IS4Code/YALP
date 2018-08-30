@@ -1,5 +1,6 @@
 #include "interop.h"
 #include "lua_utils.h"
+#include "lua_api.h"
 #include "amxutils.h"
 #include "amx/loader.h"
 #include "interop/native.h"
@@ -12,17 +13,28 @@
 #include "interop/sleep.h"
 
 #include <unordered_map>
+#include <memory>
 #include <string>
+
+std::unordered_map<AMX*, std::weak_ptr<class amx_info>> amx_map;
 
 class amx_info
 {
 public:
+	lua_State *L;
 	std::string fs_name;
+	int self = 0;
 	AMX *amx = nullptr;
+
+	amx_info(lua_State *L) : L(L)
+	{
+
+	}
 
 	~amx_info()
 	{
-		if(amx && amx::Unload(fs_name.c_str()))
+		amx_map.erase(amx);
+		if(amx && !fs_name.empty() && amx::Unload(fs_name.c_str()))
 		{
 			amx = nullptr;
 		}
@@ -119,13 +131,14 @@ int forward(lua_State *L)
 
 int lua::interop::loader(lua_State *L)
 {
-	amx_info &info = lua::newuserdata<amx_info>(L);
-	info.fs_name = "?luafs_";
-	info.fs_name.append(std::to_string(reinterpret_cast<intptr_t>(&info)));
-	AMX *amx = amx::LoadNew(info.fs_name.c_str(), 1024, sNAMEMAX, [&](AMX *amx, void *program)
+	auto ptr = std::make_shared<amx_info>(L);
+	amx_info &info = *ptr;
+	lua::pushuserdata(L, ptr);
+	auto loader = [&](AMX *amx, void *program)
 	{
 		info.amx = amx;
-		luaL_ref(L, LUA_REGISTRYINDEX);
+		info.self = luaL_ref(L, LUA_REGISTRYINDEX);
+		amx_map[amx] = ptr;
 
 		lua_newtable(L);
 
@@ -148,11 +161,21 @@ int lua::interop::loader(lua_State *L)
 
 		lua::pushstring(L, "#lua");
 		lua_setfield(L, -2, "loopback");
-	});
-	if(!amx)
+	};
+
+	AMX *amx = lua::bound_amx(L);
+	if(amx)
 	{
-		lua_pop(L, 1);
-		return 0;
+		loader(amx, nullptr);
+	}else{
+		info.fs_name = "?luafs_";
+		info.fs_name.append(std::to_string(reinterpret_cast<intptr_t>(&info)));
+		amx = amx::LoadNew(info.fs_name.c_str(), 1024, sNAMEMAX, std::move(loader));
+		if(!amx)
+		{
+			lua_pop(L, 1);
+			return 0;
+		}
 	}
 
 	return 1;
@@ -161,4 +184,20 @@ int lua::interop::loader(lua_State *L)
 bool lua::interop::amx_get_addr(AMX *amx, cell amx_addr, cell **phys_addr)
 {
 	return amx_get_param_addr(amx, amx_addr, phys_addr) || amx_get_pubvar_addr(amx, amx_addr, phys_addr);
+}
+
+void lua::interop::amx_unload(AMX *amx)
+{
+	auto it = amx_map.find(amx);
+	if(it != amx_map.end())
+	{
+		if(auto lock = it->second.lock())
+		{
+			lock->amx = nullptr;
+			lua_close(lock->L);
+		}else{
+			amx_map.erase(it);
+		}
+	}
+	amx_unregister_natives(amx);
 }

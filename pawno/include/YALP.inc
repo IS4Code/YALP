@@ -41,6 +41,7 @@ native lua_stackdump(Lua:L, depth=-1);
 native lua_gettop(Lua:L);
 native lua_settop(Lua:L, top);
 native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer));
+native lua_bind(Lua:L);
 
 stock lua_dofile(Lua:L, const name[], bufsize=-1)
 {

@@ -5,6 +5,7 @@
 #include "lua/remote.h"
 #include "main.h"
 #include <vector>
+#include <unordered_map>
 
 static int custom_print(lua_State *L)
 {
@@ -210,4 +211,46 @@ void lua::report_error(lua_State *L, int error)
 	{
 		lua_pop(L, 1);
 	}
+}
+
+std::unordered_map<AMX*, lua_State*> bind_map;
+std::unordered_map<lua_State*, AMX*> init_map;
+
+cell lua::init_bind(lua_State *L, AMX *amx)
+{
+	if(!lua_isfunction(L, -1)) return 0;
+	bind_map[amx] = L;
+	return 0xFFC52116;
+}
+
+bool lua::bind(AMX *amx)
+{
+	if(amx->pri != 0xFFC52116)
+	{
+		return false;
+	}
+	auto it = bind_map.find(amx);
+	if(it == bind_map.end())
+	{
+		return false;
+	}
+	auto L = it->second;
+	bind_map.erase(it);
+
+	amx->pri = 0;
+	amx->alt = 0;
+	amx->reset_stk = amx->stk = amx->stp;
+	amx->reset_hea = amx->hea = amx->hlw = 0;
+	amx->cip = 0;
+
+	init_map[L] = amx;
+	lua_call(L, 0, 0);
+	return true;
+}
+
+AMX *lua::bound_amx(lua_State *L)
+{
+	auto it = init_map.find(L);
+	if(it != init_map.end()) return it->second;
+	return nullptr;
 }

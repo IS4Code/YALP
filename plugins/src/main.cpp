@@ -1,6 +1,7 @@
 #include "main.h"
 #include "hooks.h"
 #include "natives.h"
+#include "lua/interop.h"
 #include "lua/timer.h"
 #include "lua/remote.h"
 
@@ -46,6 +47,7 @@ PLUGIN_EXPORT int PLUGIN_CALL AmxLoad(AMX *amx)
 
 PLUGIN_EXPORT int PLUGIN_CALL AmxUnload(AMX *amx) 
 {
+	lua::interop::amx_unload(amx);
 	return AMX_ERR_NONE;
 }
 

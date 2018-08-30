@@ -243,6 +243,17 @@ namespace Natives
 		::lua_settop(L, params[2]);
 		return 0;
 	}
+
+	static cell AMX_NATIVE_CALL lua_bind(AMX *amx, cell *params)
+	{
+		auto L = reinterpret_cast<lua_State*>(params[1]);
+		cell ret = lua::init_bind(L, amx);
+		if(ret)
+		{
+			amx_RaiseError(amx, AMX_ERR_SLEEP);
+		}
+		return ret;
+	}
 }
 
 static AMX_NATIVE_INFO native_list[] =
@@ -258,6 +269,7 @@ static AMX_NATIVE_INFO native_list[] =
 	AMX_DECLARE_NATIVE(lua_gettop),
 	{"lua_tostring", Natives::_lua_tostring},
 	AMX_DECLARE_NATIVE(lua_settop),
+	AMX_DECLARE_NATIVE(lua_bind),
 };
 
 int RegisterNatives(AMX *amx)
