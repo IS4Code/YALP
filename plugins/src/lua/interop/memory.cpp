@@ -31,14 +31,14 @@ bool toblock(lua_State *L, int idx, const std::function<void*(lua_State*, size_t
 	if(lua_isinteger(L, idx))
 	{
 		value = (cell)lua_tointeger(L, idx);
-	}else if(lua_type(L, idx) == LUA_TNUMBER)
+	}else if(lua::isnumber(L, idx))
 	{
 		float num = (float)lua_tonumber(L, idx);
 		value = amx_ftoc(num);
 	}else if(lua_isboolean(L, idx))
 	{
 		value = (cell)lua_toboolean(L, idx);
-	}else if(lua_isstring(L, idx))
+	}else if(lua::isstring(L, idx))
 	{
 		size_t len;
 		auto str = lua_tolstring(L, idx, &len);
@@ -75,8 +75,7 @@ int tobuffer(lua_State *L)
 	{
 		if(!toblock(L, i, lua_newuserdata))
 		{
-			luaL_argerror(L, i, "type not expected");
-			return 0;
+			return lua::argerrortype(L, i, "simple type");
 		}
 		lua_pushvalue(L, lua_upvalueindex(1));
 		lua_setmetatable(L, -2);
@@ -132,8 +131,7 @@ int buffer_newindex(lua_State *L)
 	{
 		value = reinterpret_cast<cell>(lua_touserdata(L, 3));
 	}else{
-		luaL_argerror(L, 3, "type not expected");
-		return 0;
+		return lua::argerrortype(L, 3, "primitive type");
 	}
 	size_t len;
 	bool isconst;
@@ -224,7 +222,7 @@ int span(lua_State *L)
 	bool isconst;
 	if(!lua::tobuffer(L, 1, blen, isconst))
 	{
-		return luaL_argerror(L, 1, "must be a buffer type");
+		return lua::argerrortype(L, 1, "buffer type");
 	}
 	ptrdiff_t offset = lua::checkoffset(L, 2);
 	lua_Integer len;
@@ -318,8 +316,7 @@ int heapfree(lua_State *L)
 		{
 			buf = data + reinterpret_cast<cell>(lua_touserdata(L, 1));
 		}else{
-			auto msg = lua_pushfstring(L, "buffer light userdata expected, got %s", luaL_typename(L, 1));
-			return luaL_argerror(L, 1, msg);
+			return lua::argerrortype(L, 1, "buffer type or light userdata");
 		}
 	}
 
@@ -351,8 +348,7 @@ int toheap(lua_State *L)
 			return static_cast<void*>(nullptr);
 		}))
 		{
-			luaL_argerror(L, i, "type not expected");
-			return 0;
+			return lua::argerrortype(L, i, "simple type");
 		}
 	}
 	return args;
@@ -375,8 +371,7 @@ int varargs(lua_State *L)
 			return &data[oldsize];
 		}))
 		{
-			luaL_argerror(L, i, "type not expected");
-			return 0;
+			return lua::argerrortype(L, i, "simple type");
 		}
 	}
 	size_t size = data.size() * sizeof(cell);
@@ -418,8 +413,7 @@ int heapargs(lua_State *L)
 			return static_cast<void*>(data + offset);
 		}))
 		{
-			luaL_argerror(L, i, "type not expected");
-			return 0;
+			return lua::argerrortype(L, i, "simple type");
 		}
 	}
 	return args;

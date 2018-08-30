@@ -297,6 +297,10 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							{
 								amx->pri = reinterpret_cast<cell>(lua_touserdata(L, -1));
 							}else{
+								if(!lua_isnil(L, -1))
+								{
+									logprintf("warning: cannot marshal return type");
+								}
 								amx->pri = 0;
 							}
 							if(retval)

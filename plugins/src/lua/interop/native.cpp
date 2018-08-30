@@ -69,7 +69,7 @@ int __call(lua_State *L)
 			}else if(lua_isboolean(L, i))
 			{
 				value = lua_toboolean(L, i);
-			}else if(lua_isstring(L, i))
+			}else if(lua::isstring(L, i))
 			{
 				size_t len;
 				auto str = lua_tolstring(L, i, &len);
@@ -118,7 +118,7 @@ int __call(lua_State *L)
 				{
 					continue;
 				}
-				return luaL_argerror(L, i, "type not expected");
+				return lua::argerrortype(L, i, "simple type");
 			}
 				
 			amx->stk -= sizeof(cell);

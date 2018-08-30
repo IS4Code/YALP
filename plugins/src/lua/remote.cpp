@@ -27,8 +27,7 @@ int reg(lua_State *L)
 	}
 	if(!ptr || lua_islightuserdata(L, 1))
 	{
-		auto msg = lua_pushfstring(L, "reference type expected, got %s", luaL_typename(L, 1));
-		return luaL_argerror(L, 1, msg);
+		return lua::argerrortype(L, 1, "reference type");
 	}
 	lua_pushvalue(L, 1);
 	lua_rawsetp(L, lua_upvalueindex(2), ptr);

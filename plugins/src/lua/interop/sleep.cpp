@@ -45,7 +45,7 @@ int sleep(lua_State *L)
 					return lua_error(L);
 			}
 		}
-		return luaL_argerror(L, 2, "type not expected");
+		return lua::argerrortype(L, 2, "primitive type or function");
 	}
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
 	return lua::amx_sleep(L, -1, 1);

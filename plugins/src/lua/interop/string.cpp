@@ -9,7 +9,7 @@ int getstring(lua_State *L)
 	auto ptr = reinterpret_cast<char*>(lua::tobuffer(L, 1, blen, isconst));
 	if(!ptr)
 	{
-		return luaL_argerror(L, 1, "must be a buffer type");
+		return lua::argerrortype(L, 1, "buffer type");
 	}
 	ptrdiff_t offset = lua::checkoffset(L, 2);
 	lua_Integer len;
@@ -49,7 +49,7 @@ int setstring(lua_State *L)
 	auto ptr = reinterpret_cast<char*>(lua::tobuffer(L, 1, blen, isconst));
 	if(!ptr)
 	{
-		return luaL_argerror(L, 1, "must be a buffer type");
+		return lua::argerrortype(L, 1, "buffer type");
 	}
 	size_t slen;
 	auto str = luaL_checklstring(L, 2, &slen);

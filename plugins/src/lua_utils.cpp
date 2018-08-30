@@ -100,7 +100,7 @@ ptrdiff_t lua::checkoffset(lua_State *L, int idx)
 	{
 		return 0;
 	}else{
-		return (ptrdiff_t)luaL_argerror(L, idx, "type not expected");
+		return (ptrdiff_t)lua::argerrortype(L, idx, "integer or light userdata");
 	}
 }
 
@@ -110,9 +110,7 @@ void *lua::checklightudata(lua_State *L, int idx)
 	{
 		return lua_touserdata(L, idx);
 	}
-	auto msg = lua_pushfstring(L, "light userdata expected, got %s", luaL_typename(L, idx));
-	luaL_argerror(L, idx, msg);
-	return nullptr;
+	return (void*)lua::argerrortype(L, idx, "light userdata");
 }
 
 int lua::load(lua_State *L, const lua::Reader &reader, const char *chunkname, const char *mode)
@@ -205,4 +203,9 @@ bool lua::isnumber(lua_State *L, int idx)
 bool lua::isstring(lua_State *L, int idx)
 {
 	return lua_type(L, idx) == LUA_TSTRING;
+}
+
+int lua::argerrortype(lua_State *L, int arg, const char *expected)
+{
+	return lua::argerror(L, arg, "%s expected, got %s", expected, luaL_typename(L, arg));
 }

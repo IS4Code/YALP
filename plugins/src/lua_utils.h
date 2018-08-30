@@ -128,6 +128,14 @@ namespace lua
 	bool isnumber(lua_State *L, int idx);
 
 	bool isstring(lua_State *L, int idx);
+
+	template <class... Args>
+	int argerror(lua_State *L, int arg, const char *format, Args&&... args)
+	{
+		return luaL_argerror(L, arg, lua_pushfstring(L, format, std::forward<Args>(args)...));
+	}
+
+	int argerrortype(lua_State *L, int arg, const char *expected);
 }
 
 #endif

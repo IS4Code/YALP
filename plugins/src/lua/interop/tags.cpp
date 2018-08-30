@@ -62,8 +62,7 @@ int tagof(lua_State *L)
 		tagname = "Float";
 	}else if(!getudatatag(L, 1, tagname))
 	{
-		auto msg = lua_pushfstring(L, "cannot obtain tag of %s", luaL_typename(L, 1));
-		return luaL_argerror(L, 1, msg);
+		return lua::argerror(L, 1, "cannot obtain tag of %s", luaL_typename(L, 1));
 	}
 
 	if(!tagname[0])
@@ -74,8 +73,7 @@ int tagof(lua_State *L)
 	size_t maxlen = (size_t)lua_tointeger(L, lua_upvalueindex(2));
 	if(std::strlen(tagname) > maxlen)
 	{
-		auto msg = lua_pushfstring(L, "tag name exceeds %d characters", maxlen);
-		return luaL_argerror(L, 1, msg);
+		return lua::argerror(L, 1, "tag name exceeds %d characters", maxlen);
 	}
 	if(lua_getfield(L, lua_upvalueindex(1), tagname) == LUA_TLIGHTUSERDATA)
 	{
