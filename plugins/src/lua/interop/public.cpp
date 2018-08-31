@@ -38,7 +38,7 @@ void lua::interop::init_public(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
 
-	auto info = std::make_shared<amx_public_info>(L, amx);
+	auto info = std::make_shared<amx_public_info>(lua::mainthread(L), amx);
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
@@ -58,7 +58,7 @@ bool getpublic(lua_State *L, const char *name, int index, int &error)
 {
 	if(lua_rawgeti(L, LUA_REGISTRYINDEX, index) == LUA_TTABLE)
 	{
-		error = lua::getfieldprotected(L, -1, name);
+		error = lua::pgetfield(L, -1, name);
 		if(error != LUA_OK || !lua_isfunction(L, -1))
 		{
 			if(error != LUA_OK)

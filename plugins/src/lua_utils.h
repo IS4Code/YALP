@@ -104,7 +104,7 @@ namespace lua
 
 	void pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn);
 
-	int getfieldprotected(lua_State *L, int idx, const char *k);
+	int pgetfield(lua_State *L, int idx, const char *k);
 
 	short numresults(lua_State *L);
 
@@ -136,6 +136,12 @@ namespace lua
 	}
 
 	int argerrortype(lua_State *L, int arg, const char *expected);
+
+	int pgettable(lua_State *L, int idx);
+
+	int psettable(lua_State *L, int idx);
+
+	int pcompare(lua_State *L, int idx1, int idx2, int op);
 }
 
 #endif

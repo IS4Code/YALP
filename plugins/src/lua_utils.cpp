@@ -130,7 +130,7 @@ void lua::pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn
 	}, 1);
 }
 
-int lua::getfieldprotected(lua_State *L, int idx, const char *k)
+int lua::pgetfield(lua_State *L, int idx, const char *k)
 {
 	idx = lua_absindex(L, idx);
 	lua_pushcfunction(L, [](lua_State *L)
@@ -208,4 +208,45 @@ bool lua::isstring(lua_State *L, int idx)
 int lua::argerrortype(lua_State *L, int arg, const char *expected)
 {
 	return lua::argerror(L, arg, "%s expected, got %s", expected, luaL_typename(L, arg));
+}
+
+int lua::pgettable(lua_State *L, int idx)
+{
+	idx = lua_absindex(L, idx);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_gettable(L, 1);
+		return 1;
+	});
+	lua_pushvalue(L, idx);
+	lua_rotate(L, -3, 2);
+	return lua_pcall(L, 2, 1, 0);
+}
+
+int lua::psettable(lua_State *L, int idx)
+{
+	idx = lua_absindex(L, idx);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_settable(L, 1);
+		return 0;
+	});
+	lua_pushvalue(L, idx);
+	lua_rotate(L, -4, 2);
+	return lua_pcall(L, 3, 0, 0);
+}
+
+int lua::pcompare(lua_State *L, int idx1, int idx2, int op)
+{
+	idx1 = lua_absindex(L, idx1);
+	idx2 = lua_absindex(L, idx2);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_pushboolean(L, lua_compare(L, 1, 2, (int)lua_tointeger(L, 3)));
+		return 1;
+	});
+	lua_pushvalue(L, idx1);
+	lua_pushvalue(L, idx2);
+	lua_pushinteger(L, op);
+	return lua_pcall(L, 3, 1, 0);
 }

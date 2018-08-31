@@ -131,7 +131,7 @@ int forward(lua_State *L)
 
 int lua::interop::loader(lua_State *L)
 {
-	auto ptr = std::make_shared<amx_info>(L);
+	auto ptr = std::make_shared<amx_info>(lua::mainthread(L));
 	amx_info &info = *ptr;
 	lua::pushuserdata(L, ptr);
 	auto loader = [&](AMX *amx, void *program)

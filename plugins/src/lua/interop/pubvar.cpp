@@ -37,7 +37,7 @@ void lua::interop::init_pubvar(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
 
-	auto info = std::make_shared<amx_pubvar_info>(L, amx);
+	auto info = std::make_shared<amx_pubvar_info>(lua::mainthread(L), amx);
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
@@ -54,7 +54,7 @@ bool getpubvar(lua_State *L, const char *name, int index, int &error, void *&buf
 {
 	if(lua_rawgeti(L, LUA_REGISTRYINDEX, index) == LUA_TTABLE)
 	{
-		error = lua::getfieldprotected(L, -1, name);
+		error = lua::pgetfield(L, -1, name);
 		size_t length;
 		bool isconst;
 		if(error != LUA_OK || !(buf = lua::tobuffer(L, -1, length, isconst)))

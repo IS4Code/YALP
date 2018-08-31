@@ -98,7 +98,7 @@ void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<ce
 {
 	int table = lua_absindex(L, -1);
 
-	auto info = std::make_shared<amx_tag_info>(L, amx);
+	auto info = std::make_shared<amx_tag_info>(lua::mainthread(L), amx);
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
