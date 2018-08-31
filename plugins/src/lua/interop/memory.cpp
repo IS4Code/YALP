@@ -6,8 +6,6 @@
 #include <cstring>
 #include <functional>
 
-constexpr cell STKMARGIN = 16 * sizeof(cell);
-
 int newbuffer(lua_State *L)
 {
 	auto isize = luaL_checkinteger(L, 1);
@@ -283,9 +281,9 @@ int heapalloc(lua_State *L)
 	}
 
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
-	if(amx->hea + size + STKMARGIN > amx->stk)
+	if(!amx::MemCheck(amx, (size_t)size))
 	{
-		return lua::amx_error(L, AMX_ERR_STACKERR);
+		return lua::amx_error(L, AMX_ERR_MEMORY);
 	}
 	cell offset = amx->hea;
 	amx->hea += (size_t)size;
@@ -400,11 +398,15 @@ int heapargs(lua_State *L)
 	int args = lua_gettop(L);
 	for(int i = 1; i <= args; i++)
 	{
+		if(!amx::MemCheck(amx, 0))
+		{
+			return lua::amx_error(L, AMX_ERR_STACKERR);
+		}
 		if(!toblock(L, i, [=](lua_State *L, size_t size)
 		{
-			if(amx->hea + (cell)size + STKMARGIN > amx->stk)
+			if(!amx::MemCheck(amx, size))
 			{
-				lua::amx_error(L, AMX_ERR_STACKERR);
+				lua::amx_error(L, AMX_ERR_MEMORY);
 				return static_cast<void*>(nullptr);
 			}
 			cell offset = amx->hea;
@@ -440,7 +442,7 @@ int vacall(lua_State *L)
 		int args = lua_gettop(L);
 		for(int i = 1; i <= args; i++)
 		{
-			if(amx->hea + STKMARGIN > amx->stk)
+			if(!amx::MemCheck(amx, 0))
 			{
 				return lua::amx_error(L, AMX_ERR_STACKERR);
 			}

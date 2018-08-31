@@ -101,3 +101,10 @@ void amx::SetString(cell *dest, const char *source, size_t len, bool pack)
 		}
 	}
 }
+
+constexpr cell STKMARGIN = 16 * sizeof(cell);
+
+bool amx::MemCheck(AMX *amx, size_t size)
+{
+	return (cell)size >= 0 && amx->hea + (cell)size + STKMARGIN <= amx->stk;
+}

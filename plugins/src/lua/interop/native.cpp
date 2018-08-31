@@ -6,8 +6,6 @@
 #include <unordered_set>
 #include <memory>
 
-constexpr cell STKMARGIN = 16 * sizeof(cell);
-
 static std::unordered_map<AMX*, std::shared_ptr<struct amx_native_info>> amx_map;
 static std::unordered_set<cell> addr_set;
 
@@ -43,7 +41,7 @@ int __call(lua_State *L)
 		bool isconst;
 		for(int i = lua_gettop(L); i >= 1; i--)
 		{
-			if(amx->hea + STKMARGIN > amx->stk)
+			if(!amx::MemCheck(amx, 0))
 			{
 				return lua::amx_error(L, AMX_ERR_STACKERR);
 			}
@@ -66,7 +64,7 @@ int __call(lua_State *L)
 				auto str = lua_tolstring(L, i, &len);
 				auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
 
-				if(amx->stk - amx->hea - len * sizeof(cell) < STKMARGIN)
+				if(!amx::MemCheck(amx, len * sizeof(cell)))
 				{
 					return lua::amx_error(L, AMX_ERR_MEMORY);
 				}
@@ -83,7 +81,7 @@ int __call(lua_State *L)
 			{
 				if(isconst)
 				{
-					if(amx->stk - amx->hea - len < STKMARGIN)
+					if(!amx::MemCheck(amx, len))
 					{
 						return lua::amx_error(L, AMX_ERR_MEMORY);
 					}
