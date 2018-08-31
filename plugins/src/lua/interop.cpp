@@ -136,6 +136,22 @@ int lua::interop::loader(lua_State *L)
 	lua::pushuserdata(L, ptr);
 	auto loader = [&](AMX *amx, void *program)
 	{
+		std::unordered_map<cell, std::string> tagcache;
+
+		int nlen;
+		amx_NameLength(amx, &nlen);
+
+		auto tagname = reinterpret_cast<char*>(alloca(nlen + 1));
+		int numtags;
+		amx_NumTags(amx, &numtags);
+		for(int i = 0; i < numtags; i++)
+		{
+			cell tag_id;
+			amx_GetTag(amx, i, tagname, &tag_id);
+
+			tagcache[tag_id] = tagname;
+		}
+
 		info.amx = amx;
 		info.self = luaL_ref(L, LUA_REGISTRYINDEX);
 		amx_map[amx] = ptr;
@@ -152,7 +168,7 @@ int lua::interop::loader(lua_State *L)
 		init_memory(L, amx);
 		init_string(L, amx);
 		init_result(L, amx);
-		init_tags(L, amx);
+		init_tags(L, amx, tagcache);
 
 		lua_getfield(L, -1, "public");
 		lua_pushlightuserdata(L, amx);

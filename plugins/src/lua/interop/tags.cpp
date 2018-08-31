@@ -94,7 +94,7 @@ int tagof(lua_State *L)
 	return 1;
 }
 
-void lua::interop::init_tags(lua_State *L, AMX *amx)
+void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<cell, std::string> &init)
 {
 	int table = lua_absindex(L, -1);
 
@@ -102,7 +102,17 @@ void lua::interop::init_tags(lua_State *L, AMX *amx)
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
-	lua_newtable(L);
+	lua_createtable(L, init.size(), 0);
+	for(const auto &pair : init)
+	{
+		int index = (pair.first & 0x3FFFFFFF) - 1;
+		lua_pushlstring(L, pair.second.c_str(), pair.second.size());
+		lua_pushvalue(L, -1);
+		lua_rawseti(L, -3, index);
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(pair.first | 0x80000000));
+		lua_settable(L, -3);
+	}
+
 	lua_pushvalue(L, -1);
 	int maxlen;
 	amx_NameLength(amx, &maxlen);
