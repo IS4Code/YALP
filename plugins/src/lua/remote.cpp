@@ -187,6 +187,27 @@ struct lua_foreign_reference
 		return 0;
 	}
 
+	int len(lua_State *L)
+	{
+		if(auto remote = connect())
+		{
+			auto L2 = remote->L;
+			int obj = lua_absindex(L2, -1);
+
+			int err = lua::plen(L2, obj);
+			remote->marshal(L, source);
+
+			lua_remove(L2, obj);
+
+			if(err != LUA_OK)
+			{
+				return lua_error(L);
+			}
+			return 1;
+		}
+		return 0;
+	}
+
 	int eq(lua_State *L)
 	{
 		if(auto remote = connect())
@@ -336,6 +357,11 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 					return lua::touserdata<lua_foreign_reference>(L, 1).call(L);
 				});
 				lua_setfield(to, -2, "__call");
+				lua_pushcfunction(to, [](lua_State *L)
+				{
+					return lua::touserdata<lua_foreign_reference>(L, 1).len(L);
+				});
+				lua_setfield(to, -2, "__len");
 				lua_pushcfunction(to, [](lua_State *L)
 				{
 					return lua::touserdata<lua_foreign_reference>(L, 1).eq(L);

@@ -250,3 +250,15 @@ int lua::pcompare(lua_State *L, int idx1, int idx2, int op)
 	lua_pushinteger(L, op);
 	return lua_pcall(L, 3, 1, 0);
 }
+
+int lua::plen(lua_State *L, int idx)
+{
+	idx = lua_absindex(L, idx);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_len(L, 1);
+		return 1;
+	});
+	lua_pushvalue(L, idx);
+	return lua_pcall(L, 2, 1, 0);
+}

@@ -142,6 +142,8 @@ namespace lua
 	int psettable(lua_State *L, int idx);
 
 	int pcompare(lua_State *L, int idx1, int idx2, int op);
+
+	int plen(lua_State *L, int idx);
 }
 
 #endif
