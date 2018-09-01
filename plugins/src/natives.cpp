@@ -195,12 +195,6 @@ static cell AMX_NATIVE_CALL n_lua_loopback(AMX *amx, cell *params)
 	return retval;
 }
 
-static cell AMX_NATIVE_CALL n_lua_gettop(AMX *amx, cell *params)
-{
-	auto L = reinterpret_cast<lua_State*>(params[1]);
-	return lua_gettop(L);
-}
-
 static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
@@ -235,10 +229,23 @@ static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 	return len;
 }
 
-static cell AMX_NATIVE_CALL n_lua_settop(AMX *amx, cell *params)
+static cell AMX_NATIVE_CALL n_lua_tointeger(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
-	lua_settop(L, params[2]);
+	return static_cast<cell>(lua_tointeger(L, params[2]));
+}
+
+static cell AMX_NATIVE_CALL n_lua_tonumber(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	float fval = static_cast<float>(lua_tonumber(L, params[2]));
+	return amx_ftoc(fval);
+}
+
+static cell AMX_NATIVE_CALL n_lua_pop(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	lua_pop(L, params[2]);
 	return 0;
 }
 
@@ -259,16 +266,20 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 
 static AMX_NATIVE_INFO native_list[] =
 {
+	AMX_DECLARE_NATIVE(lua_bind),
+	AMX_DECLARE_NATIVE(lua_loopback),
+	AMX_DECLARE_NATIVE(lua_stackdump),
+
 	AMX_DECLARE_NATIVE(lua_newstate),
-	AMX_DECLARE_NATIVE(lua_dostring),
 	AMX_DECLARE_NATIVE(lua_close),
 	AMX_DECLARE_NATIVE(lua_load),
 	AMX_DECLARE_NATIVE(lua_pcall),
 	AMX_DECLARE_NATIVE(lua_call),
-	AMX_DECLARE_NATIVE(lua_stackdump),
-	AMX_DECLARE_NATIVE(lua_loopback),
+	AMX_DECLARE_NATIVE(lua_dostring),
 	AMX_DECLARE_NATIVE(lua_tostring),
-	AMX_DECLARE_NATIVE(lua_bind),
+	AMX_DECLARE_NATIVE(lua_tonumber),
+	AMX_DECLARE_NATIVE(lua_tointeger),
+	AMX_DECLARE_NATIVE(lua_pop),
 
 	AMX_DECLARE_LUA_NATIVE(lua_absindex),
 	AMX_DECLARE_LUA_NATIVE(lua_checkstack),

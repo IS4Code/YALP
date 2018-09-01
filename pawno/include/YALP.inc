@@ -80,6 +80,11 @@ public _lua_freader(Lua:L, buffer[], File:file, size)
     return size;
 }
 
+native lua_tointeger(Lua:L, idx);
+native Float:lua_tonumber(Lua:L, idx);
+native lua_pop(Lua:L, n);
+
+//Directly ported
 native Lua:lua_newthread(Lua:L);
 
 native lua_version(Lua:L);
