@@ -345,6 +345,9 @@
     <ClInclude Include="src\lua\interop\pubvar.h">
       <Filter>src\lua\interop</Filter>
     </ClInclude>
+    <ClInclude Include="src\lua_adapt.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="YALP.def" />

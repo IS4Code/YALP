@@ -248,6 +248,7 @@
     <ClInclude Include="src\lua\lualibs.h" />
     <ClInclude Include="src\lua\remote.h" />
     <ClInclude Include="src\lua\timer.h" />
+    <ClInclude Include="src\lua_adapt.h" />
     <ClInclude Include="src\lua_api.h" />
     <ClInclude Include="src\lua_utils.h" />
     <ClInclude Include="src\main.h" />
