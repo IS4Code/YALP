@@ -10,8 +10,8 @@
 
 typedef std::function<void()> handler_t;
 
-unsigned int tick_count = 0;
-std::list<std::pair<unsigned int, handler_t>> tick_handlers;
+static int tick_count = 0;
+std::list<std::pair<int, handler_t>> tick_handlers;
 std::list<std::pair<std::chrono::system_clock::time_point, handler_t>> timer_handlers;
 
 template <class Ord, class Obj>
@@ -26,13 +26,13 @@ typename std::list<std::pair<Ord, Obj>>::iterator insert_sorted(std::list<std::p
 	}
 }
 
-void register_tick(unsigned int ticks, handler_t &&handler)
+void register_tick(int ticks, handler_t &&handler)
 {
-	unsigned int time = tick_count + ticks;
+	int time = tick_count + ticks;
 	insert_sorted(tick_handlers, time, std::move(handler));
 }
 
-void register_timer(unsigned int interval, handler_t &&handler)
+void register_timer(int interval, handler_t &&handler)
 {
 	auto time = std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::milliseconds(interval));
 	insert_sorted(timer_handlers, time, std::move(handler));
@@ -87,18 +87,34 @@ void lua::timer::close()
 	timer_handlers.clear();
 }
 
-template <void (*Register)(unsigned int interval, handler_t &&handler)>
+template <void (*Register)(int interval, handler_t &&handler)>
 int settimer(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	auto interval = luaL_checkinteger(L, 2);
-
-	lua_pushvalue(L, 1);
+	if(lua_gettop(L) > 2)
+	{
+		lua_pushinteger(L, lua_gettop(L) - 2);
+		lua_replace(L, 2);
+		lua_pushcclosure(L, [](lua_State *L)
+		{
+			lua_pushvalue(L, lua_upvalueindex(1));
+			int num = (int)lua_tointeger(L, lua_upvalueindex(2));
+			for(int i = 1; i <= num; i++)
+			{
+				lua_pushvalue(L, lua_upvalueindex(2 + i));
+			}
+			return lua::tailcall(L, num);
+		}, lua_gettop(L));
+	}else{
+		lua_remove(L, 2);
+	}
+	
 	int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	std::weak_ptr<char> handle = lua::touserdata<std::shared_ptr<char>>(L, lua_upvalueindex(1));
 	L = lua::mainthread(L);
-	Register((unsigned int)interval, [=]()
+	Register((int)interval, [=]()
 	{
 		if(auto lock = handle.lock())
 		{
@@ -127,7 +143,6 @@ bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 		if(lua_rawget(L, -2) != LUA_TNIL)
 		{
 			lua_remove(L, -2);
-			lua_pushinteger(L, 1);
 			return true;
 		}
 		lua_pop(L, 2);
@@ -135,18 +150,25 @@ bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 	return false;
 }
 
-int parallel(lua_State *L)
+int parallelreg(lua_State *L)
 {
 	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed in a coroutine");
 	int count = 100000;
 	if(lua_isinteger(L, 1))
 	{
 		luaL_checktype(L, 2, LUA_TFUNCTION);
+		luaL_checktype(L, 3, LUA_TFUNCTION);
 		count = (int)lua_tointeger(L, 1);
+		if(count <= 0)
+		{
+			return luaL_argerror(L, 1, "out of range");
+		}
 		lua_remove(L, 1);
 	}else if(!lua_isfunction(L, 1))
 	{
 		return lua::argerrortype(L, 1, "function or integer");
+	}else{
+		luaL_checktype(L, 2, LUA_TFUNCTION);
 	}
 
 	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) != LUA_TTABLE)
@@ -161,9 +183,19 @@ int parallel(lua_State *L)
 		lua_setmetatable(L, -2);
 	}
 	lua_pushthread(L);
-	lua_pushvalue(L, lua_upvalueindex(1));
+	/*lua_pushvalue(L, lua_upvalueindex(1));
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		lua_settop(L, 1);
+		lua_pushvalue(L, lua_upvalueindex(1));
+		lua_insert(L, 1);
+		lua_pushinteger(L, 1);
+		return lua::tailcall(L, lua_gettop(L) - 1);
+	}, 1);*/
+	lua_pushvalue(L, 2);
 	lua_rawset(L, -3);
 	lua_pop(L, 1);
+	lua_remove(L, 2);
 
 	lua_Hook hook = [](lua_State *L, lua_Debug *ar)
 	{
@@ -193,6 +225,20 @@ int parallel(lua_State *L)
 	return cont(L, lua_pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, 0, cont), 0);
 }
 
+int parallel(lua_State *L)
+{
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_insert(L, 1);
+	lua_pushvalue(L, lua_upvalueindex(2));
+	if(lua_isinteger(L, 2))
+	{
+		lua_insert(L, 4);
+	}else{
+		lua_insert(L, 3);
+	}
+	return lua::tailcall(L, lua_gettop(L) - 1);
+}
+
 int lua::timer::loader(lua_State *L)
 {
 	lua_createtable(L, 0, 2);
@@ -207,8 +253,20 @@ int lua::timer::loader(lua_State *L)
 	lua_setfield(L, table, "tick");
 	luaL_ref(L, LUA_REGISTRYINDEX);
 
+	lua_pushcfunction(L, parallelreg);
+	lua_setfield(L, table, "parallelreg");
+
+	lua_getfield(L, table, "parallelreg");
 	lua_getfield(L, table, "tick");
-	lua_pushcclosure(L, parallel, 1);
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		lua_settop(L, 1);
+		lua_pushvalue(L, lua_upvalueindex(1));
+		lua_insert(L, 1);
+		lua_pushinteger(L, 1);
+		return lua::tailcall(L, lua_gettop(L) - 1);
+	}, 1);
+	lua_pushcclosure(L, parallel, 2);
 	lua_setfield(L, table, "parallel");
 
 	return 1;
