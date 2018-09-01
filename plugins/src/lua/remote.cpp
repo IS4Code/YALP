@@ -6,7 +6,7 @@
 
 static std::unordered_map<const void*, std::weak_ptr<struct lua_ref_info>> ref_map;
 
-static char PROXYMT;
+static const char PROXYMTKEY;
 
 struct lua_ref_info
 {
@@ -214,7 +214,7 @@ struct lua_foreign_reference
 		{
 			if(lua_getmetatable(L, 2))
 			{
-				bool isproxy = lua_rawgetp(L, -1, &PROXYMT) != LUA_TNIL;
+				bool isproxy = lua_rawgetp(L, -1, &PROXYMTKEY) != LUA_TNIL;
 				lua_pop(L, 2);
 
 				if(isproxy)
@@ -313,7 +313,7 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 		{
 			if(lua_getmetatable(L, top))
 			{
-				bool isproxy = lua_rawgetp(L, -1, &PROXYMT) != LUA_TNIL;
+				bool isproxy = lua_rawgetp(L, -1, &PROXYMTKEY) != LUA_TNIL;
 				lua_pop(L, 2);
 
 				if(isproxy)
@@ -339,7 +339,7 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 			if(lua_getmetatable(to, -1))
 			{
 				lua_pushboolean(to, true);
-				lua_rawsetp(to, -2, &PROXYMT);
+				lua_rawsetp(to, -2, &PROXYMTKEY);
 				lua_pushstring(to, "proxy");
 				lua_setfield(to, -2, "__name");
 				lua_pushcfunction(to, [](lua_State *L)

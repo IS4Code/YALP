@@ -10,6 +10,7 @@ namespace lua
 		int loader(lua_State *L);
 		void close();
 		void tick();
+		bool pushyielded(lua_State *L, lua_State *from);
 	}
 }
 

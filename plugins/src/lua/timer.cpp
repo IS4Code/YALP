@@ -116,6 +116,83 @@ int settimer(lua_State *L)
 	return 0;
 }
 
+static const char HOOKKEY;
+
+bool lua::timer::pushyielded(lua_State *L, lua_State *from)
+{
+	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TTABLE)
+	{
+		lua_pushthread(from);
+		lua_xmove(from, L, 1);
+		if(lua_rawget(L, -2) != LUA_TNIL)
+		{
+			lua_remove(L, -2);
+			lua_pushinteger(L, 1);
+			return true;
+		}
+		lua_pop(L, 2);
+	}
+	return false;
+}
+
+int parallel(lua_State *L)
+{
+	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed in a coroutine");
+	int count = 100000;
+	if(lua_isinteger(L, 1))
+	{
+		luaL_checktype(L, 2, LUA_TFUNCTION);
+		count = (int)lua_tointeger(L, 1);
+		lua_remove(L, 1);
+	}else if(!lua_isfunction(L, 1))
+	{
+		return lua::argerrortype(L, 1, "function or integer");
+	}
+
+	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) != LUA_TTABLE)
+	{
+		lua_pop(L, 1);
+		lua_createtable(L, 0, 2);
+		lua_pushvalue(L, -1);
+		lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+		lua_pushstring(L, "k");
+		lua_setfield(L, -2, "__mode");
+		lua_pushvalue(L, -1);
+		lua_setmetatable(L, -2);
+	}
+	lua_pushthread(L);
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_rawset(L, -3);
+	lua_pop(L, 1);
+
+	lua_Hook hook = [](lua_State *L, lua_Debug *ar)
+	{
+		lua_yield(L, 0);
+	};
+
+	lua_sethook(L, hook, LUA_MASKCOUNT, count);
+	lua_KFunction cont = [](lua_State *L, int status, lua_KContext ctx)
+	{
+		lua_sethook(L, nullptr, 0, 0);
+		lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+		lua_pushthread(L);
+		lua_pushnil(L);
+		lua_rawset(L, -3);
+		lua_pop(L, 1);
+
+		switch(status)
+		{
+			case LUA_OK:
+			case LUA_YIELD:
+				return lua_gettop(L);
+			default:
+				return lua_error(L);
+		}
+	};
+	
+	return cont(L, lua_pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, 0, cont), 0);
+}
+
 int lua::timer::loader(lua_State *L)
 {
 	lua_createtable(L, 0, 2);
@@ -129,6 +206,10 @@ int lua::timer::loader(lua_State *L)
 	lua_pushcclosure(L, settimer<register_tick>, 1);
 	lua_setfield(L, table, "tick");
 	luaL_ref(L, LUA_REGISTRYINDEX);
+
+	lua_getfield(L, table, "tick");
+	lua_pushcclosure(L, parallel, 1);
+	lua_setfield(L, table, "parallel");
 
 	return 1;
 }

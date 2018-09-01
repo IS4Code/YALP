@@ -106,7 +106,15 @@ int async(lua_State *L)
 				return num;
 			case LUA_YIELD:
 				num = lua_gettop(thread);
-				lua_xmove(thread, L, num);
+				if(num == 0 || !lua_isfunction(thread, 1))
+				{
+					if(!lua::timer::pushyielded(L, thread))
+					{
+						return luaL_error(L, "inner function must yield a function to register the continuation");
+					}
+				}else{
+					lua_xmove(thread, L, num);
+				}
 				lua_pushvalue(L, lua_upvalueindex(2));
 				lua_insert(L, 2);
 				return lua::tailcall(L, lua_gettop(L) - 1);
