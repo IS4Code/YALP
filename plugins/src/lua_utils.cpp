@@ -260,5 +260,5 @@ int lua::plen(lua_State *L, int idx)
 		return 1;
 	});
 	lua_pushvalue(L, idx);
-	return lua_pcall(L, 2, 1, 0);
+	return lua_pcall(L, 1, 1, 0);
 }
