@@ -211,6 +211,7 @@ void lua::interop::amx_unload(AMX *amx)
 		{
 			lock->amx = nullptr;
 			lua_close(lock->L);
+			lua::cleanup(lock->L);
 		}else{
 			amx_map.erase(it);
 		}

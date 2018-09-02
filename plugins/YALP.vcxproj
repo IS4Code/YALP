@@ -179,6 +179,7 @@
     <ClCompile Include="src\lua\interop\tags.cpp" />
     <ClCompile Include="src\lua\remote.cpp" />
     <ClCompile Include="src\lua\timer.cpp" />
+    <ClCompile Include="src\lua_adapt.cpp" />
     <ClCompile Include="src\lua_api.cpp" />
     <ClCompile Include="src\lua_utils.cpp" />
     <ClCompile Include="src\natives.cpp" />

@@ -1,221 +1,241 @@
+#ifndef LUA_ADAPT_H_INCLUDED
+#define LUA_ADAPT_H_INCLUDED
+
 #include "lua/lualibs.h"
 #include "sdk/amx/amx.h"
 
-template <class Type>
-struct lua_adapt_return
-{
+#include <stdexcept>
 
-};
-
-template <>
-struct lua_adapt_return<int>
+namespace lua
 {
-	static cell convert(int arg)
+	class panic_error : public std::runtime_error
 	{
-		return arg;
-	}
-};
+	public:
+		panic_error(const char *what) : std::runtime_error(what)
+		{
+			
+		}
+	};
 
-template <>
-struct lua_adapt_return<size_t>
-{
-	static cell convert(size_t arg)
+	int atpanic(lua_State *L);
+
+	template <class Type>
+	struct adapt_return
 	{
-		return static_cast<cell>(arg);
-	}
-};
 
-template <>
-struct lua_adapt_return<lua_Integer>
-{
-	static cell convert(lua_Integer arg)
+	};
+
+	template <>
+	struct adapt_return<int>
 	{
-		return static_cast<cell>(arg);
-	}
-};
+		static cell convert(int arg)
+		{
+			return arg;
+		}
+	};
 
-template <>
-struct lua_adapt_return<lua_Number>
-{
-	static cell convert(lua_Number arg)
+	template <>
+	struct adapt_return<size_t>
 	{
-		float fval = static_cast<float>(arg);
-		return amx_ftoc(fval);
-	}
-};
+		static cell convert(size_t arg)
+		{
+			return static_cast<cell>(arg);
+		}
+	};
 
-template <>
-struct lua_adapt_return<void*>
-{
-	static cell convert(void *arg)
+	template <>
+	struct adapt_return<lua_Integer>
 	{
-		return reinterpret_cast<cell>(arg);
-	}
-};
+		static cell convert(lua_Integer arg)
+		{
+			return static_cast<cell>(arg);
+		}
+	};
 
-template <>
-struct lua_adapt_return<const void*>
-{
-	static cell convert(const void *arg)
+	template <>
+	struct adapt_return<lua_Number>
 	{
-		return reinterpret_cast<cell>(arg);
-	}
-};
+		static cell convert(lua_Number arg)
+		{
+			float fval = static_cast<float>(arg);
+			return amx_ftoc(fval);
+		}
+	};
 
-template <>
-struct lua_adapt_return<lua_State*>
-{
-	static cell convert(lua_State *arg)
+	template <>
+	struct adapt_return<void*>
 	{
-		return reinterpret_cast<cell>(arg);
-	}
-};
+		static cell convert(void *arg)
+		{
+			return reinterpret_cast<cell>(arg);
+		}
+	};
 
-template <>
-struct lua_adapt_return<const lua_Number*>
-{
-	static cell convert(const lua_Number *arg)
+	template <>
+	struct adapt_return<const void*>
 	{
-		return static_cast<cell>(*arg);
-	}
-};
+		static cell convert(const void *arg)
+		{
+			return reinterpret_cast<cell>(arg);
+		}
+	};
 
-template <class Type>
-struct lua_adapt_arg
-{
-
-};
-
-template <>
-struct lua_adapt_arg<int>
-{
-	static int convert(cell arg)
+	template <>
+	struct adapt_return<lua_State*>
 	{
-		return arg;
-	}
-};
+		static cell convert(lua_State *arg)
+		{
+			return reinterpret_cast<cell>(arg);
+		}
+	};
 
-template <>
-struct lua_adapt_arg<size_t>
-{
-	static size_t convert(cell arg)
+	template <>
+	struct adapt_return<const lua_Number*>
 	{
-		return arg;
-	}
-};
+		static cell convert(const lua_Number *arg)
+		{
+			return static_cast<cell>(*arg);
+		}
+	};
 
-template <>
-struct lua_adapt_arg<lua_Integer>
-{
-	static lua_Integer convert(cell arg)
+	template <class Type>
+	struct adapt_arg
 	{
-		return arg;
-	}
-};
 
-template <>
-struct lua_adapt_arg<lua_Number>
-{
-	static lua_Number convert(cell arg)
+	};
+
+	template <>
+	struct adapt_arg<int>
 	{
-		return amx_ctof(arg);
-	}
-};
+		static int convert(cell arg)
+		{
+			return arg;
+		}
+	};
 
-template <>
-struct lua_adapt_arg<void*>
-{
-	static void *convert(cell arg)
+	template <>
+	struct adapt_arg<size_t>
 	{
-		return reinterpret_cast<void*>(arg);
-	}
-};
+		static size_t convert(cell arg)
+		{
+			return arg;
+		}
+	};
 
-template <>
-struct lua_adapt_arg<const void*>
-{
-	static const void *convert(cell arg)
+	template <>
+	struct adapt_arg<lua_Integer>
 	{
-		return reinterpret_cast<const void*>(arg);
-	}
-};
+		static lua_Integer convert(cell arg)
+		{
+			return arg;
+		}
+	};
 
-template <>
-struct lua_adapt_arg<lua_State*>
-{
-	static lua_State *convert(cell arg)
+	template <>
+	struct adapt_arg<lua_Number>
 	{
-		return reinterpret_cast<lua_State*>(arg);
-	}
-};
+		static lua_Number convert(cell arg)
+		{
+			return amx_ctof(arg);
+		}
+	};
 
-template <class FType, FType Func>
-struct lua_adapt
-{
-
-};
-
-template <void(Func)(lua_State *L)>
-struct lua_adapt<void(lua_State *L), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+	template <>
+	struct adapt_arg<void*>
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		Func(L);
-		return 0;
-	}
-};
+		static void *convert(cell arg)
+		{
+			return reinterpret_cast<void*>(arg);
+		}
+	};
 
-
-template <class Return, Return(Func)(lua_State *L)>
-struct lua_adapt<Return(lua_State *L), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+	template <>
+	struct adapt_arg<const void*>
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		return lua_adapt_return<Return>::convert(Func(L));
-	}
-};
+		static const void *convert(cell arg)
+		{
+			return reinterpret_cast<const void*>(arg);
+		}
+	};
 
-template <class Arg1, void(Func)(lua_State *L, Arg1)>
-struct lua_adapt<void(lua_State *L, Arg1), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+	template <>
+	struct adapt_arg<lua_State*>
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		Func(L, lua_adapt_arg<Arg1>::convert(params[2]));
-		return 0;
-	}
-};
+		static lua_State *convert(cell arg)
+		{
+			return reinterpret_cast<lua_State*>(arg);
+		}
+	};
 
-template <class Return, class Arg1, Return(Func)(lua_State *L, Arg1)>
-struct lua_adapt<Return(lua_State *L, Arg1), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+	template <class FType, FType Func>
+	struct adapt
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		return lua_adapt_return<Return>::convert(Func(L, lua_adapt_arg<Arg1>::convert(params[2])));
-	}
-};
 
-template <class Arg1, class Arg2, void(Func)(lua_State *L, Arg1, Arg2)>
-struct lua_adapt<void(lua_State *L, Arg1, Arg2), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+	};
+
+	template <void(Func)(lua_State *L)>
+	struct adapt<void(lua_State *L), Func>
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		Func(L, lua_adapt_arg<Arg1>::convert(params[2]), lua_adapt_arg<Arg2>::convert(params[3]));
-		return 0;
-	}
-};
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			Func(L);
+			return 0;
+		}
+	};
 
-template <class Return, class Arg1, class Arg2, Return(Func)(lua_State *L, Arg1, Arg2)>
-struct lua_adapt<Return(lua_State *L, Arg1, Arg2), Func>
-{
-	static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+
+	template <class Return, Return(Func)(lua_State *L)>
+	struct adapt<Return(lua_State *L), Func>
 	{
-		auto L = reinterpret_cast<lua_State*>(params[1]);
-		return lua_adapt_return<Return>::convert(Func(L, lua_adapt_arg<Arg1>::convert(params[2]), lua_adapt_arg<Arg2>::convert(params[3])));
-	}
-};
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			return adapt_return<Return>::convert(Func(L));
+		}
+	};
 
+	template <class Arg1, void(Func)(lua_State *L, Arg1)>
+	struct adapt<void(lua_State *L, Arg1), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			Func(L, adapt_arg<Arg1>::convert(params[2]));
+			return 0;
+		}
+	};
+
+	template <class Return, class Arg1, Return(Func)(lua_State *L, Arg1)>
+	struct adapt<Return(lua_State *L, Arg1), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2])));
+		}
+	};
+
+	template <class Arg1, class Arg2, void(Func)(lua_State *L, Arg1, Arg2)>
+	struct adapt<void(lua_State *L, Arg1, Arg2), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3]));
+			return 0;
+		}
+	};
+
+	template <class Return, class Arg1, class Arg2, Return(Func)(lua_State *L, Arg1, Arg2)>
+	struct adapt<Return(lua_State *L, Arg1, Arg2), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3])));
+		}
+	};
+}
+
+#endif

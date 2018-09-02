@@ -17,8 +17,6 @@
       else (result) = NULL;                                                 \
     } while (0)
 
-#define AMX_DECLARE_NATIVE(Name) {#Name, n_##Name}
-
 int RegisterNatives(AMX *amx);
 
 #endif

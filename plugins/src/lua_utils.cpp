@@ -3,6 +3,8 @@
 #include "sdk/amx/amx.h"
 #include "lua/lstate.h"
 
+#include <unordered_map>
+
 void errortable(lua_State *L, int error)
 {
 	lua_createtable(L, 0, 3);
@@ -261,4 +263,25 @@ int lua::plen(lua_State *L, int idx)
 	});
 	lua_pushvalue(L, idx);
 	return lua_pcall(L, 1, 1, 0);
+}
+
+static std::unordered_map<void*, lua::Alloc> allocmap;
+
+void lua::setallocf(lua_State *L, Alloc &&f)
+{
+	allocmap[L] = std::move(f);
+	lua_setallocf(L, [](void *ud, void *ptr, size_t osize, size_t nsize)
+	{
+		return allocmap[ud](ptr, osize, nsize);
+	}, L);
+}
+
+void lua::cleanup(lua_State *L)
+{
+	allocmap.erase(L);
+}
+
+bool lua::active(lua_State *L)
+{
+	return L->nCcalls > 0;
 }

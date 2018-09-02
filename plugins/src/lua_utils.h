@@ -144,6 +144,13 @@ namespace lua
 	int pcompare(lua_State *L, int idx1, int idx2, int op);
 
 	int plen(lua_State *L, int idx);
+
+	typedef std::function<void*(void *ptr, size_t osize, size_t nsize)> Alloc;
+
+	void setallocf(lua_State *L, Alloc &&f);
+	void cleanup(lua_State *L);
+
+	bool active(lua_State *L);
 }
 
 #endif

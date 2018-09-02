@@ -3,12 +3,43 @@
 #include "lua_utils.h"
 #include "lua_adapt.h"
 
-// native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs);
+// native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
 static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 {
 	auto L = luaL_newstate();
 	if(L)
 	{
+		lua_atpanic(L, lua::atpanic);
+		int memlimit = optparam(3, -1);
+
+		if(memlimit >= 0)
+		{
+			size_t total = lua_gc(L, LUA_GCCOUNT, 0);
+
+			void *ud;
+			auto oldalloc = lua_getallocf(L, &ud);
+			lua::setallocf(L, [=](void *ptr, size_t osize, size_t nsize) mutable
+			{
+				if(total + nsize > (size_t)memlimit)
+				{
+					if(ptr == nullptr || nsize > osize)
+					{
+						return static_cast<void*>(nullptr);
+					}
+				}
+				void *ret = oldalloc(ud, ptr, osize, nsize);
+				if(ret)
+				{
+					if(ptr != nullptr)
+					{
+						total -= osize;
+					}
+					total += nsize;
+				}
+				return ret;
+			});
+		}
+
 		lua::init(L, optparam(1, 0xCF), optparam(2, 0x1C00));
 	}
 	return reinterpret_cast<cell>(L);
@@ -29,7 +60,14 @@ static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
+	if(lua::active(L))
+	{
+		logprintf("cannot close a running Lua state");
+		amx_RaiseError(amx, AMX_ERR_NATIVE);
+		return 0;
+	}
 	lua_close(L);
+	lua::cleanup(L);
 	return 1;
 }
 
@@ -262,7 +300,20 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 	return ret;
 }
 
-#define AMX_DECLARE_LUA_NATIVE(Name) {#Name, lua_adapt<decltype(Name), Name>::native}
+template <AMX_NATIVE native>
+static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
+{
+	try{
+		return native(amx, params);
+	}catch(const lua::panic_error&)
+	{
+		amx_RaiseError(amx, AMX_ERR_NATIVE);
+		return 0;
+	}
+}
+
+#define AMX_DECLARE_NATIVE(Name) {#Name, error_wrapper<n_##Name>}
+#define AMX_DECLARE_LUA_NATIVE(Name) {#Name, error_wrapper<lua::adapt<decltype(Name), Name>::native>}
 
 static AMX_NATIVE_INFO native_list[] =
 {
