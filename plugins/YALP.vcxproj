@@ -105,13 +105,15 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
-      <PreprocessorDefinitions>HAVE_STDINT_H;_CRT_SECURE_NO_WARNINGS;SAMPGDK_AMALGAMATION;SUBHOOK_IMPLEMENTATION;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LUA_USE_APICHECK;lua_assert=assert;HAVE_STDINT_H;_CRT_SECURE_NO_WARNINGS;SAMPGDK_AMALGAMATION;SUBHOOK_IMPLEMENTATION;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>include;lib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ProgramDataBaseFileName>$(OutDir)YALP.pdb</ProgramDataBaseFileName>
       <Optimization>Disabled</Optimization>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <LanguageStandard>stdcpp14</LanguageStandard>
+      <ForcedIncludeFiles>
+      </ForcedIncludeFiles>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>BOOST_ALL_NO_LIB;BOOST_CHRONO_HEADER_ONLY;_CRT_SECURE_NO_WARNINGS;SAMPGDK_AMALGAMATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
