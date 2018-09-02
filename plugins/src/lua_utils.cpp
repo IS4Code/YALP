@@ -285,3 +285,15 @@ bool lua::active(lua_State *L)
 {
 	return L->nCcalls > 0;
 }
+
+lua::jumpguard::jumpguard(lua_State *L) : L(L), jmp(L->errorJmp), gljmp(L->l_G->mainthread->errorJmp)
+{
+	L->errorJmp = nullptr;
+	L->l_G->mainthread->errorJmp = nullptr;
+}
+
+lua::jumpguard::~jumpguard()
+{
+	L->errorJmp = reinterpret_cast<lua_longjmp*>(jmp);
+	L->l_G->mainthread->errorJmp = reinterpret_cast<lua_longjmp*>(gljmp);
+}

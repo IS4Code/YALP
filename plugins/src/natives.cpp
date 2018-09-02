@@ -60,6 +60,7 @@ static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
+	lua_error(L);
 	if(lua::active(L))
 	{
 		logprintf("cannot close a running Lua state");
@@ -300,11 +301,11 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 	return ret;
 }
 
-template <AMX_NATIVE native>
+template <AMX_NATIVE Native>
 static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
 {
 	try{
-		return native(amx, params);
+		return Native(amx, params);
 	}catch(const lua::panic_error&)
 	{
 		amx_RaiseError(amx, AMX_ERR_NATIVE);

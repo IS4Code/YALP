@@ -20,6 +20,31 @@ struct amx_native_info
 	}
 };
 
+class amx_stackguard
+{
+	AMX *amx;
+	cell hea, stk;
+
+public:
+	std::vector<cell> reset_addr;
+
+	amx_stackguard(AMX *amx) : amx(amx), hea(amx->hea), stk(amx->stk)
+	{
+
+	}
+
+	~amx_stackguard()
+	{
+		amx->hea = hea;
+		amx->stk = stk;
+
+		for(const cell &value : reset_addr)
+		{
+			addr_set.erase(value);
+		}
+	}
+};
+
 int __call(lua_State *L)
 {
 	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
@@ -27,121 +52,118 @@ int __call(lua_State *L)
 	if(native)
 	{
 		auto amx = info->amx;
-		cell hea = amx->hea;
-		cell stk = amx->stk;
-
-		auto hdr = (AMX_HEADER*)amx->base;
-		auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
-
-		std::vector<cell> reset_addr;
-
+		int errorcode;
+		cell result;
 		bool castresult = false;
-		int paramcount = 0;
-		size_t len;
-		bool isconst;
-		for(int i = lua_gettop(L); i >= 1; i--)
+
 		{
-			if(!amx::MemCheck(amx, 0))
-			{
-				return lua::amx_error(L, AMX_ERR_STACKERR);
-			}
+			amx_stackguard amx_guard(amx);
+			auto hdr = (AMX_HEADER*)amx->base;
+			auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
-			cell value = 0;
-			
-			if(lua_isinteger(L, i))
+			int paramcount = 0;
+			size_t len;
+			bool isconst;
+			for(int i = lua_gettop(L); i >= 1; i--)
 			{
-				value = (cell)lua_tointeger(L, i);
-			}else if(lua::isnumber(L, i))
-			{
-				float num = (float)lua_tonumber(L, i);
-				value = amx_ftoc(num);
-			}else if(lua_isboolean(L, i))
-			{
-				value = lua_toboolean(L, i);
-			}else if(lua::isstring(L, i))
-			{
-				size_t len;
-				auto str = lua_tolstring(L, i, &len);
-				auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
-
-				if(!amx::MemCheck(amx, len * sizeof(cell)))
+				if(!amx::MemCheck(amx, 0))
 				{
-					return lua::amx_error(L, AMX_ERR_MEMORY);
+					return lua::amx_error(L, AMX_ERR_STACKERR);
 				}
 
-				value = amx->hea;
-				auto addr = reinterpret_cast<cell*>(data + amx->hea);
-				amx::SetString(addr, str, len, true);
-				amx->hea += dlen;
-			}else if(i == 1 && lua_isfunction(L, i))
-			{
-				castresult = true;
-				continue;
-			}else if(auto buf = lua::tobuffer(L, i, len, isconst))
-			{
-				if(isconst)
+				cell value = 0;
+			
+				if(lua_isinteger(L, i))
 				{
-					if(!amx::MemCheck(amx, len))
+					value = (cell)lua_tointeger(L, i);
+				}else if(lua::isnumber(L, i))
+				{
+					float num = (float)lua_tonumber(L, i);
+					value = amx_ftoc(num);
+				}else if(lua_isboolean(L, i))
+				{
+					value = lua_toboolean(L, i);
+				}else if(lua::isstring(L, i))
+				{
+					size_t len;
+					auto str = lua_tolstring(L, i, &len);
+					auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
+
+					if(!amx::MemCheck(amx, len * sizeof(cell)))
 					{
 						return lua::amx_error(L, AMX_ERR_MEMORY);
 					}
+
 					value = amx->hea;
-					auto addr = data + amx->hea;
-					std::memcpy(addr, buf, len);
-					amx->hea += len;
-				}else{
-					value = reinterpret_cast<unsigned char*>(buf) - data;
-					if(value < 0 || value >= amx->stp)
+					auto addr = reinterpret_cast<cell*>(data + amx->hea);
+					amx::SetString(addr, str, len, true);
+					amx->hea += dlen;
+				}else if(i == 1 && lua_isfunction(L, i))
+				{
+					castresult = true;
+					continue;
+				}else if(auto buf = lua::tobuffer(L, i, len, isconst))
+				{
+					if(isconst)
 					{
-						if(addr_set.insert(value).second)
+						if(!amx::MemCheck(amx, len))
 						{
-							reset_addr.push_back(value);
+							return lua::amx_error(L, AMX_ERR_MEMORY);
+						}
+						value = amx->hea;
+						auto addr = data + amx->hea;
+						std::memcpy(addr, buf, len);
+						amx->hea += len;
+					}else{
+						value = reinterpret_cast<unsigned char*>(buf) - data;
+						if(value < 0 || value >= amx->stp)
+						{
+							if(addr_set.insert(value).second)
+							{
+								amx_guard.reset_addr.push_back(value);
+							}
 						}
 					}
-				}
-			}else if(lua_islightuserdata(L, i))
-			{
-				value = reinterpret_cast<cell>(lua_touserdata(L, i));
-			}else{
-				if(lua_isnil(L, i) && paramcount == 0)
+				}else if(lua_islightuserdata(L, i))
 				{
-					continue;
+					value = reinterpret_cast<cell>(lua_touserdata(L, i));
+				}else{
+					if(lua_isnil(L, i) && paramcount == 0)
+					{
+						continue;
+					}
+					return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 				}
-				return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
-			}
 				
+				amx->stk -= sizeof(cell);
+				paramcount++;
+				*(cell*)(data + amx->stk) = value;
+			}
+
 			amx->stk -= sizeof(cell);
-			paramcount++;
-			*(cell*)(data + amx->stk) = value;
-		}
+			auto params = (cell*)(data + amx->stk);
+			*params = paramcount * sizeof(cell);
 
-		amx->stk -= sizeof(cell);
-		auto params = (cell*)(data + amx->stk);
-		*params = paramcount * sizeof(cell);
-
-		amx->error = 0;
-		cell result = native(amx, params);
-
-		for(const cell &value : reset_addr)
-		{
-			addr_set.erase(value);
-		}
-
-		amx->stk = stk;
-		amx->hea = hea;
-
-		if(amx->error)
-		{
-			int code = amx->error;
 			amx->error = 0;
+
+			{
+				lua::jumpguard guard(L);
+				result = native(amx, params);
+			}
+
+			errorcode = amx->error;
+		}
+
+		if(errorcode)
+		{
 			bool mainstate = false;
-			if(code == AMX_ERR_SLEEP)
+			if(errorcode == AMX_ERR_SLEEP)
 			{
 				mainstate = !lua_isyieldable(L);
 			}
-			if(code != AMX_ERR_SLEEP || mainstate)
+			if(errorcode != AMX_ERR_SLEEP || mainstate)
 			{
-				return lua::amx_error(L, code, result);
+				return lua::amx_error(L, errorcode, result);
 			}
 			lua_pushvalue(L, lua_upvalueindex(3));
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
@@ -162,7 +184,7 @@ int __call(lua_State *L)
 		{
 			if(castresult)
 			{
-				lua_pushvalue(L, 1);
+				lua_settop(L, 1);
 			}
 			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
 			if(castresult)

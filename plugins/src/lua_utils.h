@@ -151,6 +151,16 @@ namespace lua
 	void cleanup(lua_State *L);
 
 	bool active(lua_State *L);
+
+	class jumpguard
+	{
+		lua_State *L;
+		void *jmp;
+		void *gljmp;
+	public:
+		jumpguard(lua_State *L);
+		~jumpguard();
+	};
 }
 
 #endif
