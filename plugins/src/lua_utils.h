@@ -106,6 +106,8 @@ namespace lua
 
 	int pgetfield(lua_State *L, int idx, const char *k);
 
+	int psetfield(lua_State *L, int idx, const char *k);
+
 	short numresults(lua_State *L);
 
 	lua_State *mainthread(lua_State *L);

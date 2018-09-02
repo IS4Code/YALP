@@ -1,7 +1,13 @@
 #include "natives.h"
+#include "amxutils.h"
 #include "lua_api.h"
 #include "lua_utils.h"
 #include "lua_adapt.h"
+#include <string>
+#include <iomanip>
+#include <bitset>
+#include <cctype>
+#include <sstream>
 
 // native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
 static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
@@ -60,7 +66,6 @@ static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
-	lua_error(L);
 	if(lua::active(L))
 	{
 		logprintf("cannot close a running Lua state");
@@ -301,6 +306,408 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 	return ret;
 }
 
+
+static cell AMX_NATIVE_CALL n_lua_pushpfunction(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+
+	char *name;
+	amx_StrParam(amx, params[2], name);
+
+	lua::pushuserdata(L, std::weak_ptr<AMX*>(amx::GetHandle(amx)));
+	lua_pushstring(L, name);
+
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		auto name = lua_tostring(L, lua_upvalueindex(2));
+		if(auto lock = lua::touserdata<std::weak_ptr<AMX*>>(L, lua_upvalueindex(1)).lock())
+		{
+			auto amx = *lock;
+			int index, error;
+			error = amx_FindPublic(amx, name, &index);
+			if(error != AMX_ERR_NONE)
+			{
+				return luaL_error(L, "function '%s' cannot be found in the AMX", name);
+			}
+			amx_Push(amx, reinterpret_cast<cell>(L));
+			cell retval;
+			{
+				lua::jumpguard guard(L);
+				error = amx_Exec(amx, &retval, index);
+			}
+			if(error != AMX_ERR_NONE)
+			{
+				return lua::amx_error(L, error);
+			}
+			return retval;
+		}else{
+			return luaL_error(L, "function '%s' cannot be found because the AMX no longer exists", name);
+		}
+	}, 2);
+
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_gettable(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	switch(lua::pgettable(L, params[2]))
+	{
+		case LUA_OK:
+			return lua_type(L, -1);
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_getfield(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	char *name;
+	amx_StrParam(amx, params[3], name);
+
+	switch(lua::pgetfield(L, params[2], name))
+	{
+		case LUA_OK:
+			return lua_type(L, -1);
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_getglobal(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	char *name;
+	amx_StrParam(amx, params[2], name);
+
+	lua_pushglobaltable(L);
+	switch(lua::pgetfield(L, -1, name))
+	{
+		case LUA_OK:
+			lua_remove(L, -2);
+			return lua_type(L, -1);
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 2);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 2);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_settable(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	switch(lua::psettable(L, params[2]))
+	{
+		case LUA_OK:
+			break;
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	char *name;
+	amx_StrParam(amx, params[3], name);
+	
+	switch(lua::psetfield(L, params[2], name))
+	{
+		case LUA_OK:
+			break;
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	char *name;
+	amx_StrParam(amx, params[2], name);
+
+	lua_pushglobaltable(L);
+	lua_insert(L, -2);
+	switch(lua::psetfield(L, -2, name))
+	{
+		case LUA_OK:
+			lua_pop(L, 1);
+			break;
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 2);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 2);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_len(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+
+	cell len;
+	switch(lua::plen(L, params[2]))
+	{
+		case LUA_OK:
+			len = (cell)lua_tointeger(L, -1);
+			lua_pop(L, 1);
+			return len;
+		case LUA_ERRMEM:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_MEMORY);
+			break;
+		default:
+			logprintf("%s", lua_tostring(L, -1));
+			lua_pop(L, 1);
+			amx_RaiseError(amx, AMX_ERR_GENERAL);
+			break;
+	}
+	return 0;
+}
+
+static cell AMX_NATIVE_CALL n_lua_pushstring(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	char *str;
+	amx_StrParam(amx, params[2], str);
+
+	lua_pushstring(L, str);
+	return 0;
+}
+
+void add_query(std::string &buf, const cell *arg)
+{
+	int len;
+	amx_StrLen(arg, &len);
+
+	char *str = reinterpret_cast<char*>(alloca(len + 1));
+	amx_GetString(str, arg, 0, len + 1);
+
+	buf.reserve(len);
+
+	const char *start = str;
+	while(len--)
+	{
+		if(*str == '\'')
+		{
+			buf.append(start, str - start + 1);
+			buf.push_back('\'');
+			start = str + 1;
+		}
+		str++;
+	}
+	buf.append(start, str - start);
+}
+
+namespace aux
+{
+	void push_args(std::ostream &ostream)
+	{
+
+	}
+
+	template <class Arg, class... Args>
+	void push_args(std::ostream &ostream, Arg &&arg, Args&&... args)
+	{
+		ostream << std::forward<Arg>(arg);
+		push_args(ostream, std::forward<Args>(args)...);
+	}
+
+	template <class Obj, class... Args>
+	std::string to_string(Obj &&obj, Args&&... args)
+	{
+		std::ostringstream ostream;
+		push_args(ostream, std::forward<Args>(args)...);
+		ostream << std::forward<Obj>(obj);
+		return ostream.str();
+	}
+
+	template <class NumType>
+	NumType parse_num(const char *str, size_t &pos)
+	{
+		bool neg = str[pos] == '-';
+		if(neg) pos++;
+		NumType val = 0;
+		char c;
+		while(std::isdigit(c = str[pos++]))
+		{
+			val = (val * 10) + (c - '0');
+		}
+		return neg ? -val : val;
+	}
+}
+
+void add_format(std::string &buf, const char *begin, const char *end, cell *arg)
+{
+	ptrdiff_t flen = end - begin;
+	switch(*end)
+	{
+		case 's':
+		{
+			int len;
+			amx_StrLen(arg, &len);
+			size_t begin = buf.size();
+			buf.resize(begin + len, '\0');
+			amx_GetString(&buf[begin], arg, 0, len + 1);
+		}
+		break;
+		case 'q':
+		{
+			add_query(buf, arg);
+		}
+		break;
+		case 'd':
+		case 'i':
+		{
+			buf.append(std::to_string(*arg));
+		}
+		break;
+		case 'f':
+		{
+			if(*begin == '.')
+			{
+				size_t pos = 0;
+				auto precision = aux::parse_num<std::streamsize>(begin + 1, pos);
+				buf.append(aux::to_string(amx_ctof(*arg), std::setprecision(precision), std::fixed));
+			}else{
+				buf.append(std::to_string(amx_ctof(*arg)));
+			}
+		}
+		break;
+		case 'c':
+		{
+			buf.append(1, static_cast<char>(*arg));
+		}
+		break;
+		case 'h':
+		case 'x':
+		{
+			buf.append(aux::to_string(*arg, std::hex, std::uppercase));
+		}
+		break;
+		case 'o':
+		{
+			buf.append(aux::to_string(*arg, std::oct));
+		}
+		break;
+		case 'b':
+		{
+			std::bitset<8> bits(*arg);
+			buf.append(bits.to_string());
+		}
+		break;
+		case 'u':
+		{
+			buf.append(std::to_string(static_cast<ucell>(*arg)));
+		}
+		break;
+	}
+}
+
+static cell AMX_NATIVE_CALL n_lua_pushfstring(AMX *amx, cell *params)
+{
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+
+	cell *addr;
+	amx_GetAddr(amx, params[2], &addr);
+	int len;
+	amx_StrLen(addr, &len);
+	char *fmt = reinterpret_cast<char*>(alloca(len + 1));
+	amx_GetString(fmt, addr, 0, len + 1);
+
+	cell argc = params[0] / sizeof(cell) - 2;
+
+	std::string buf;
+	buf.reserve(len + 8 * argc);
+
+	int argn = 0;
+
+	char *c = fmt;
+	while(len--)
+	{
+		if(*c == '%' && len > 0)
+		{
+			buf.append(fmt, c - fmt);
+
+			const char *start = ++c;
+			if(*c == '%')
+			{
+				buf.push_back('%');
+				fmt = c + 1;
+				len--;
+			}else{
+				while(len-- && !std::isalpha(*c)) c++;
+				if(len < 0) break;
+				if(argn >= argc)
+				{
+					//error
+				}else{
+					cell *argv;
+					amx_GetAddr(amx, params[3 + argn++], &argv);
+					add_format(buf, start, c, argv);
+				}
+				fmt = c + 1;
+			}
+		}
+		c++;
+	}
+	buf.append(fmt, c - fmt);
+
+	lua_pushlstring(L, &buf[0], buf.size());
+	return 0;
+}
+
 template <AMX_NATIVE Native>
 static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
 {
@@ -340,6 +747,16 @@ static AMX_NATIVE_INFO native_list[] =
 	AMX_DECLARE_NATIVE(lua_tonumber),
 	AMX_DECLARE_NATIVE(lua_tointeger),
 	AMX_DECLARE_NATIVE(lua_pop),
+	AMX_DECLARE_NATIVE(lua_pushpfunction),
+	AMX_DECLARE_NATIVE(lua_settable),
+	AMX_DECLARE_NATIVE(lua_setfield),
+	AMX_DECLARE_NATIVE(lua_setglobal),
+	AMX_DECLARE_NATIVE(lua_gettable),
+	AMX_DECLARE_NATIVE(lua_getfield),
+	AMX_DECLARE_NATIVE(lua_getglobal),
+	AMX_DECLARE_NATIVE(lua_len),
+	AMX_DECLARE_NATIVE(lua_pushstring),
+	AMX_DECLARE_NATIVE(lua_pushfstring),
 
 	AMX_DECLARE_LUA_NATIVE(lua_absindex),
 	AMX_DECLARE_LUA_NATIVE(lua_checkstack),

@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <stdlib.h>
+#include <unordered_map>
 
 const char *amx::StrError(int errnum)
 {
@@ -107,4 +108,21 @@ constexpr cell STKMARGIN = 16 * sizeof(cell);
 bool amx::MemCheck(AMX *amx, size_t size)
 {
 	return (cell)size >= 0 && amx->hea + (cell)size + STKMARGIN <= amx->stk;
+}
+
+std::unordered_map<AMX*, std::shared_ptr<AMX*>> handle_map;
+
+std::shared_ptr<AMX*> amx::GetHandle(AMX *amx)
+{
+	auto it = handle_map.find(amx);
+	if(it != handle_map.end())
+	{
+		return it->second;
+	}
+	return handle_map[amx] = std::make_shared<AMX*>(amx);
+}
+
+void amx::RemoveHandle(AMX *amx)
+{
+	handle_map.erase(amx);
 }

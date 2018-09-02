@@ -146,6 +146,21 @@ int lua::pgetfield(lua_State *L, int idx, const char *k)
 	return lua_pcall(L, 2, 1, 0);
 }
 
+int lua::psetfield(lua_State *L, int idx, const char *k)
+{
+	idx = lua_absindex(L, idx);
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		auto k = reinterpret_cast<const char*>(lua_touserdata(L, 2));
+		lua_setfield(L, 1, k);
+		return 0;
+	});
+	lua_pushvalue(L, idx);
+	lua_pushlightuserdata(L, const_cast<char*>(k));
+	lua_rotate(L, -4, 3);
+	return lua_pcall(L, 3, 0, 0);
+}
+
 short lua::numresults(lua_State *L)
 {
 	if(!L->ci) return 0;

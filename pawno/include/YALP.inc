@@ -40,6 +40,7 @@ native lua_call(Lua:L, nargs, nresults);
 native lua_stackdump(Lua:L, depth=-1);
 native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer));
 native lua_bind(Lua:L);
+native lua_pushpfunction(Lua:L, const f[]);
 
 stock lua_dofile(Lua:L, const name[], bufsize=-1)
 {
@@ -83,6 +84,15 @@ public _lua_freader(Lua:L, buffer[], File:file, size)
 native lua_tointeger(Lua:L, idx);
 native Float:lua_tonumber(Lua:L, idx);
 native lua_pop(Lua:L, n);
+native lua_gettable(Lua:L, idx);
+native lua_getfield(Lua:L, idx, const k[]);
+native lua_getglobal(Lua:L, const name[]);
+native lua_settable(Lua:L, idx);
+native lua_setfield(Lua:L, idx, const k[]);
+native lua_setglobal(Lua:L, const name[]);
+native lua_len(Lua:L, idx);
+native lua_pushstring(Lua:L, const s[]);
+native lua_pushfstring(Lua:L, const fmt[], ...);
 
 //Directly ported
 native Lua:lua_newthread(Lua:L);
