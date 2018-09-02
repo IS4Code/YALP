@@ -157,6 +157,11 @@ struct lua_foreign_reference
 			int callable = lua_absindex(L2, -1);
 			int top = lua_gettop(L2) - 1;
 
+			if(!lua_checkstack(L2, args + 4))
+			{
+				lua_pop(L2, 1);
+				return luaL_error(L, "stack overflow");
+			}
 			for(int i = 2; i <= args; i++)
 			{
 				lua_pushvalue(L, i);
@@ -170,7 +175,12 @@ struct lua_foreign_reference
 			}
 
 			numresults = lua_gettop(L2) - top;
-
+			
+			if(!lua_checkstack(L, args + 4))
+			{
+				lua_settop(L2, top);
+				return luaL_error(L, "stack overflow");
+			}
 			for(int i = 1; i <= numresults; i++)
 			{
 				lua_pushvalue(L2, top + i);

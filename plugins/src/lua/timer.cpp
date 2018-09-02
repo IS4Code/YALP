@@ -100,6 +100,7 @@ int settimer(lua_State *L)
 		{
 			lua_pushvalue(L, lua_upvalueindex(1));
 			int num = (int)lua_tointeger(L, lua_upvalueindex(2));
+			luaL_checkstack(L, num, nullptr);
 			for(int i = 1; i <= num; i++)
 			{
 				lua_pushvalue(L, lua_upvalueindex(2 + i));
@@ -136,8 +137,13 @@ static const char HOOKKEY;
 
 bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 {
+	luaL_checkstack(L, 4, nullptr);
 	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TTABLE)
 	{
+		if(!lua_checkstack(from, 1))
+		{
+			luaL_error(L, "stack overflow");
+		}
 		lua_pushthread(from);
 		lua_xmove(from, L, 1);
 		if(lua_rawget(L, -2) != LUA_TNIL)

@@ -102,6 +102,7 @@ void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<ce
 	amx_map[amx] = info;
 	lua::pushuserdata(L, info);
 
+	luaL_checkstack(L, init.size() + 4, nullptr);
 	lua_createtable(L, init.size(), 0);
 	for(const auto &pair : init)
 	{
@@ -144,6 +145,10 @@ bool lua::interop::amx_find_tag_id(AMX *amx, cell tag_id, char *tagname)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(gettaglist(L, info->taglist))
 				{
 					int index = tag_id & 0x3FFFFFFF;
@@ -175,6 +180,10 @@ bool lua::interop::amx_get_tag(AMX *amx, int index, char *tagname, cell *tag_id)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(gettaglist(L, info->taglist))
 				{
 					index += 1;
@@ -210,6 +219,10 @@ bool lua::interop::amx_num_tags(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(gettaglist(L, info->taglist))
 				{
 					*number = lua_rawlen(L, -1);

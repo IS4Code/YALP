@@ -94,6 +94,11 @@ bool lua::interop::amx_find_pubvar(AMX *amx, const char *varname, cell *amx_addr
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					error = AMX_ERR_MEMORY;
+					return true;
+				}
 				if(getpubvarlist(L, info->pubvarlist))
 				{
 					int index = 0;
@@ -180,6 +185,10 @@ bool lua::interop::amx_get_pubvar(AMX *amx, int index, char *varname, cell *amx_
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(getpubvarlist(L, info->pubvarlist))
 				{
 					if(lua_rawgeti(L, -1, index + 1) == LUA_TTABLE)
@@ -222,6 +231,10 @@ bool lua::interop::amx_num_pubvars(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(getpubvarlist(L, info->pubvarlist))
 				{
 					*number = (int)lua_rawlen(L, -1);

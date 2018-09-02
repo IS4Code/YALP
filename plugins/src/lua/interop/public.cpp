@@ -96,6 +96,11 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					error = AMX_ERR_MEMORY;
+					return true;
+				}
 				if(getpubliclist(L, info->publiclist))
 				{
 					bool indexed = false;
@@ -169,6 +174,10 @@ bool lua::interop::amx_get_public(AMX *amx, int index, char *funcname)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 4))
+				{
+					return false;
+				}
 				if(getpubliclist(L, info->publiclist))
 				{
 					if(lua_rawgeti(L, -1, index + 1) == LUA_TTABLE)
@@ -200,6 +209,10 @@ bool lua::interop::amx_num_publics(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				if(!lua_checkstack(L, 1))
+				{
+					return false;
+				}
 				if(getpubliclist(L, info->publiclist))
 				{
 					*number = (int)lua_rawlen(L, -1);
@@ -220,6 +233,11 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 		if(auto info = it->second.lock())
 		{
 			auto L = info->L;
+			if(!lua_checkstack(L, amx->paramcount + 5))
+			{
+				result = amx->error = AMX_ERR_MEMORY;
+				return true;
+			}
 			bool cont = index == AMX_EXEC_CONT;
 			if(cont || getpubliclist(L, info->publiclist))
 			{

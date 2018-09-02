@@ -60,6 +60,7 @@ int bind(lua_State *L)
 	lua_pushcclosure(L, [](lua_State *L)
 	{
 		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
+		luaL_checkstack(L, num, nullptr);
 		for(int i = 0; i < num; i++)
 		{
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
@@ -93,6 +94,10 @@ int async(lua_State *L)
 	{
 		auto thread = lua_tothread(L, lua_upvalueindex(1));
 		int num = lua_gettop(L);
+		if(!lua_checkstack(thread, num))
+		{
+			return luaL_error(L, "stack overflow");
+		}
 		lua_xmove(L, thread, num);
 		if(lua_status(thread) == LUA_OK)
 		{
@@ -102,6 +107,7 @@ int async(lua_State *L)
 		{
 			case LUA_OK:
 				num = lua_gettop(thread);
+				luaL_checkstack(L, num, nullptr);
 				lua_xmove(thread, L, num);
 				return num;
 			case LUA_YIELD:
@@ -113,6 +119,7 @@ int async(lua_State *L)
 						return luaL_error(L, "inner function must yield a function to register the continuation");
 					}
 				}else{
+					luaL_checkstack(L, num + 2, nullptr);
 					lua_xmove(thread, L, num);
 				}
 				lua_pushvalue(L, lua_upvalueindex(2));

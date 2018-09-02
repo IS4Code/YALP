@@ -59,6 +59,7 @@ int forward(lua_State *L)
 		lua_pushvalue(L, lua_upvalueindex(3));
 		lua_setfield(L, lua_upvalueindex(2), "#lua");
 		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
+		luaL_checkstack(L, num, nullptr);
 		for(int i = 1; i <= num; i++)
 		{
 			lua_pushvalue(L, lua_upvalueindex(4 + i));
@@ -118,6 +119,7 @@ int forward(lua_State *L)
 		{
 			num = numresults;
 		}
+		luaL_checkstack(L, num, nullptr);
 		for(int i = 1; i <= num; i++)
 		{
 			lua_rawgeti(L, table,  1 + i);

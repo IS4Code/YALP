@@ -77,6 +77,7 @@ int tobuffer(lua_State *L)
 		}
 		lua_pushvalue(L, lua_upvalueindex(1));
 		lua_setmetatable(L, -2);
+		lua_replace(L, i);
 	}
 	return args;
 }
@@ -348,6 +349,7 @@ int toheap(lua_State *L)
 		{
 			return lua::argerrortype(L, i, "simple type");
 		}
+		lua_replace(L, i);
 	}
 	return args;
 }
@@ -372,12 +374,16 @@ int varargs(lua_State *L)
 			return lua::argerrortype(L, i, "simple type");
 		}
 	}
+	lua_settop(L, 0);
+
 	size_t size = data.size() * sizeof(cell);
 	void *addr = lua_newuserdata(L, size);
 	std::memcpy(addr, &data[0], size);
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_setmetatable(L, -2);
 	int buffer = lua_absindex(L, -1);
+
+	luaL_checkstack(L, args - 1 + 4, nullptr);
 	for(const auto &pair : sizes)
 	{
 		lua_pushvalue(L, lua_upvalueindex(2));
@@ -417,6 +423,7 @@ int heapargs(lua_State *L)
 		{
 			return lua::argerrortype(L, i, "simple type");
 		}
+		lua_replace(L, i);
 	}
 	return args;
 }
@@ -478,6 +485,7 @@ int vacall(lua_State *L)
 		}
 
 		int num = (int)lua_tointeger(L, lua_upvalueindex(2));
+		luaL_checkstack(L, num, nullptr);
 		for(int i = 1; i <= num; i++)
 		{
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
@@ -504,6 +512,7 @@ int vacall(lua_State *L)
 						nr = heapsize;
 					}
 					auto heap = reinterpret_cast<cell*>(data + amx->hea);
+					luaL_checkstack(L, nr, nullptr);
 					for(int i = 0; i < nr; i++)
 					{
 						restorers[i](L, heap[i]);
