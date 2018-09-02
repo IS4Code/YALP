@@ -152,7 +152,7 @@ bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 
 int parallelreg(lua_State *L)
 {
-	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed in a coroutine");
+	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed inside 'async'");
 	int count = 100000;
 	if(lua_isinteger(L, 1))
 	{
@@ -183,15 +183,6 @@ int parallelreg(lua_State *L)
 		lua_setmetatable(L, -2);
 	}
 	lua_pushthread(L);
-	/*lua_pushvalue(L, lua_upvalueindex(1));
-	lua_pushcclosure(L, [](lua_State *L)
-	{
-		lua_settop(L, 1);
-		lua_pushvalue(L, lua_upvalueindex(1));
-		lua_insert(L, 1);
-		lua_pushinteger(L, 1);
-		return lua::tailcall(L, lua_gettop(L) - 1);
-	}, 1);*/
 	lua_pushvalue(L, 2);
 	lua_rawset(L, -3);
 	lua_pop(L, 1);

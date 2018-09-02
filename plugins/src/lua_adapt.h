@@ -11,7 +11,9 @@ namespace lua
 	class panic_error : public std::runtime_error
 	{
 	public:
-		panic_error(const char *what) : std::runtime_error(what)
+		int code;
+
+		panic_error(const char *what, int code) : std::runtime_error(what), code(code)
 		{
 			
 		}

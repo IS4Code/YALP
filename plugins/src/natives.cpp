@@ -306,9 +306,17 @@ static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
 {
 	try{
 		return Native(amx, params);
-	}catch(const lua::panic_error&)
+	}catch(const lua::panic_error &error)
 	{
-		amx_RaiseError(amx, AMX_ERR_NATIVE);
+		switch(error.code)
+		{
+			case LUA_ERRMEM:
+				amx_RaiseError(amx, AMX_ERR_MEMORY);
+				break;
+			default:
+				amx_RaiseError(amx, AMX_ERR_NATIVE);
+				break;
+		}
 		return 0;
 	}
 }

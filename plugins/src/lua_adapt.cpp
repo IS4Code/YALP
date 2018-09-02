@@ -6,5 +6,5 @@ int lua::atpanic(lua_State *L)
 {
 	auto str = lua_tostring(L, -1);
 	lua::report_error(L, lua_status(L));
-	throw lua::panic_error(str);
+	throw lua::panic_error(str, lua_status(L));
 }
