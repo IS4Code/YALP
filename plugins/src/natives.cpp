@@ -16,17 +16,18 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 	if(L)
 	{
 		lua_atpanic(L, lua::atpanic);
-		int memlimit = optparam(3, -1);
+		long long memlimit = optparam(3, -1) * 1024;
 
 		if(memlimit >= 0)
 		{
-			size_t total = lua_gc(L, LUA_GCCOUNT, 0);
+			long long total = lua_gc(L, LUA_GCCOUNT, 0);
+			total = total * 1024 + lua_gc(L, LUA_GCCOUNTB, 0);
 
 			void *ud;
 			auto oldalloc = lua_getallocf(L, &ud);
 			lua::setallocf(L, [=](void *ptr, size_t osize, size_t nsize) mutable
 			{
-				if(total + nsize > (size_t)memlimit)
+				if(total + nsize > memlimit)
 				{
 					if(ptr == nullptr || nsize > osize)
 					{
