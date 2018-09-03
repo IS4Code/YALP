@@ -4,7 +4,13 @@
 #include <unordered_map>
 #include <memory>
 
-static std::unordered_map<const void*, std::weak_ptr<struct lua_ref_info>> ref_map;
+struct lua_registered_ref
+{
+	int count = 0;
+	std::weak_ptr<struct lua_ref_info> info;
+};
+
+static std::unordered_map<const void*, lua_registered_ref> ref_map;
 
 static const char PROXYMTKEY;
 
@@ -401,7 +407,8 @@ int _register(lua_State *L)
 	lua_rawsetp(L, lua_upvalueindex(2), ptr);
 
 	auto &handle = lua::touserdata<std::shared_ptr<lua_ref_info>>(L, lua_upvalueindex(1));
-	ref_map[ptr] = handle;
+	ref_map[ptr].info = handle;
+	ref_map[ptr].count++;
 	lua_pushlightuserdata(L, const_cast<void*>(ptr));
 	return 1;
 }
@@ -413,10 +420,17 @@ int get(lua_State *L)
 	auto it = ref_map.find(ptr);
 	if(it != ref_map.end())
 	{
-		auto obj = it->second.lock();
+		auto &reg = it->second;
+
+		auto obj = reg.info.lock();
 		if(remove)
 		{
-			ref_map.erase(it);
+			if(--reg.count <= 0)
+			{
+				ref_map.erase(it);
+			}else{
+				remove = false;
+			}
 		}
 		if(obj)
 		{
@@ -452,8 +466,16 @@ int unregister(lua_State *L)
 	auto it = ref_map.find(ptr);
 	if(it != ref_map.end())
 	{
-		auto obj = it->second.lock();
-		ref_map.erase(it);
+		auto &reg = it->second;
+
+		auto obj = reg.info.lock();
+		if(--reg.count <= 0)
+		{
+			ref_map.erase(it);
+		}else{
+			lua_pushboolean(L, true);
+			return 1;
+		}
 		if(obj)
 		{
 			auto L2 = obj->L;
