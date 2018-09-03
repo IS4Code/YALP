@@ -407,8 +407,13 @@ int _register(lua_State *L)
 	lua_rawsetp(L, lua_upvalueindex(2), ptr);
 
 	auto &handle = lua::touserdata<std::shared_ptr<lua_ref_info>>(L, lua_upvalueindex(1));
-	ref_map[ptr].info = handle;
-	ref_map[ptr].count++;
+	auto &ref = ref_map[ptr];
+	if(ref.info.expired())
+	{
+		ref.count = 0;
+	}
+	ref.info = handle;
+	ref.count++;
 	lua_pushlightuserdata(L, const_cast<void*>(ptr));
 	return 1;
 }
