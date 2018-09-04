@@ -268,6 +268,35 @@ int lua::pcompare(lua_State *L, int idx1, int idx2, int op)
 	return lua_pcall(L, 3, 1, 0);
 }
 
+int lua::parith(lua_State *L, int op)
+{
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_arith(L, (int)lua_tointeger(L, 1));
+		return 1;
+	});
+	lua_pushinteger(L, op);
+	if(op != LUA_OPUNM && op != LUA_OPBNOT)
+	{
+		lua_rotate(L, -4, 2);
+		return lua_pcall(L, 3, 1, 0);
+	}else{
+		lua_rotate(L, -3, 2);
+		return lua_pcall(L, 2, 1, 0);
+	}
+}
+
+int lua::pconcat(lua_State *L, int n)
+{
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_concat(L, lua_gettop(L));
+		return 1;
+	});
+	lua_insert(L, -n - 1);
+	return lua_pcall(L, n, 1, 0);
+}
+
 int lua::plen(lua_State *L, int idx)
 {
 	idx = lua_absindex(L, idx);
@@ -311,4 +340,15 @@ lua::jumpguard::~jumpguard()
 {
 	L->errorJmp = reinterpret_cast<lua_longjmp*>(jmp);
 	L->l_G->mainthread->errorJmp = reinterpret_cast<lua_longjmp*>(gljmp);
+}
+
+int lua::error(lua_State *L)
+{
+	if(lua_type(L, -1) == LUA_TSTRING)
+	{
+		luaL_where(L, 1);
+		lua_insert(L, -2);
+		lua_concat(L, 2);
+	}
+	return lua_error(L);
 }

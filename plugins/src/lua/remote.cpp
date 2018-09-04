@@ -12,8 +12,6 @@ struct lua_registered_ref
 
 static std::unordered_map<const void*, lua_registered_ref> ref_map;
 
-static const char PROXYMTKEY;
-
 struct lua_ref_info
 {
 	lua_State *L;
@@ -25,7 +23,7 @@ struct lua_ref_info
 
 	}
 
-	bool marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller);
+	bool marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy = false);
 
 	bool gettable()
 	{
@@ -49,6 +47,20 @@ struct lua_ref_info
 		return {};
 	}
 };
+
+static const char PROXYMTKEY;
+
+bool isproxy(lua_State *L, int idx)
+{
+	if(lua_getmetatable(L, idx))
+	{
+		lua_rawgetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY);
+		bool isproxy = lua_rawequal(L, -2, -1);
+		lua_pop(L, 2);
+		return isproxy;
+	}
+	return false;
+}
 
 struct lua_foreign_reference
 {
@@ -77,15 +89,20 @@ struct lua_foreign_reference
 		}
 	}
 
-	std::shared_ptr<lua_ref_info> connect()
+	std::shared_ptr<lua_ref_info> connect(lua_State *from)
 	{
 		if(obj && source)
 		{
 			if(auto remote = remote_weak.lock())
 			{
+				auto L2 = remote->L;
+				if(!lua_checkstack(L2, 4))
+				{
+					luaL_error(from, "stack overflow");
+					return {};
+				}
 				if(remote->gettable())
 				{
-					auto L2 = remote->L;
 					lua_rawgeti(L2, -1, obj);
 					lua_remove(L2, -2);
 					return remote;
@@ -95,19 +112,18 @@ struct lua_foreign_reference
 		return {};
 	}
 
-	bool duplicate(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller)
+	bool duplicate(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy, lua_State *from)
 	{
-		if(auto remote = connect())
+		if(auto remote = connect(from))
 		{
-			remote->marshal(to, marshaller);
-			return true;
+			return remote->marshal(to, marshaller, noproxy);
 		}
 		return false;
 	}
 
 	int index(lua_State *L)
 	{
-		if(auto remote = connect())
+		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
 			int indexable = lua_absindex(L2, -1);
@@ -121,7 +137,7 @@ struct lua_foreign_reference
 
 			if(err != LUA_OK)
 			{
-				return lua_error(L);
+				return lua::error(L);
 			}
 			return 1;
 		}
@@ -130,7 +146,7 @@ struct lua_foreign_reference
 
 	int newindex(lua_State *L)
 	{
-		if(auto remote = connect())
+		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
 			int indexable = lua_absindex(L2, -1);
@@ -146,7 +162,7 @@ struct lua_foreign_reference
 			if(err != LUA_OK)
 			{
 				remote->marshal(L, source);
-				return lua_error(L);
+				return lua::error(L);
 			}
 			return 0;
 		}
@@ -157,7 +173,7 @@ struct lua_foreign_reference
 	{
 		int args = lua_gettop(L);
 		int numresults = lua::numresults(L);
-		if(auto remote = connect())
+		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
 			int callable = lua_absindex(L2, -1);
@@ -177,7 +193,7 @@ struct lua_foreign_reference
 			if(lua_pcall(L2, args - 1, numresults, 0) != LUA_OK)
 			{
 				remote->marshal(L, source);
-				return lua_error(L);
+				return lua::error(L);
 			}
 
 			numresults = lua_gettop(L2) - top;
@@ -205,7 +221,7 @@ struct lua_foreign_reference
 
 	int len(lua_State *L)
 	{
-		if(auto remote = connect())
+		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
 			int obj = lua_absindex(L2, -1);
@@ -217,58 +233,247 @@ struct lua_foreign_reference
 
 			if(err != LUA_OK)
 			{
-				return lua_error(L);
+				return lua::error(L);
 			}
 			return 1;
 		}
 		return 0;
 	}
 
-	int eq(lua_State *L)
+	template <int Op>
+	int cmp(lua_State *L, int idx)
 	{
-		if(auto remote = connect())
+		if(auto remote = connect(L))
 		{
-			if(lua_getmetatable(L, 2))
+			auto L2 = remote->L;
+			int top = lua_gettop(L);
+			if(!lua_checkstack(L2, top + 4))
 			{
-				bool isproxy = lua_rawgetp(L, -1, &PROXYMTKEY) != LUA_TNIL;
-				lua_pop(L, 2);
-
-				if(isproxy)
+				return luaL_error(L, "stack overflow");
+			}
+			int err;
+			if(idx == 2)
+			{
+				lua_pop(L, 1);
+				if(!source->marshal(L2, remote, true))
 				{
-					auto &ref = lua::touserdata<lua_foreign_reference>(L, 2);
-					
-					if(auto remote2 = ref.connect())
+					lua_pop(L2, 1);
+					if(Op == LUA_OPEQ)
 					{
-						if(remote != remote2 || remote->L != remote2->L)
-						{
-							lua_pop(remote2->L, 1);
-						}else{
-							auto L2 = remote->L;
-							int err = lua::pcompare(L2, -2, -1, LUA_OPEQ);
-							remote->marshal(L, source);
-
-							if(L2 != L)
-							{
-								lua_pop(L2, 2);
-							}
-
-							if(err != LUA_OK)
-							{
-								return lua_error(L);
-							}
-							return 1;
-						}
+						return 0;
+					}else{
+						return luaL_argerror(L, 1, "requires creating a proxy");
 					}
 				}
+				err = lua::pcompare(L2, -1, -2, Op);
+			}else{
+				if(!source->marshal(L2, remote, true))
+				{
+					lua_pop(L2, 1);
+					if(Op == LUA_OPEQ)
+					{
+						return 0;
+					}else{
+						return luaL_argerror(L, 2, "requires creating a proxy");
+					}
+				}
+				err = lua::pcompare(L2, -2, -1, Op);
 			}
-			lua_pop(remote->L, 1);
+			remote->marshal(L, source);
+
+			if(L2 != L)
+			{
+				lua_pop(L2, 2);
+			}
+
+			if(err != LUA_OK)
+			{
+				return lua::error(L);
+			}
+			return 1;
 		}
 		lua_pushboolean(L, false);
 		return 1;
 	}
+
+	template <int Op>
+	int arith(lua_State *L, int idx)
+	{
+		if(auto remote = connect(L))
+		{
+			auto L2 = remote->L;
+			int top = lua_gettop(L);
+			if(!lua_checkstack(L2, top + 4))
+			{
+				return luaL_error(L, "stack overflow");
+			}
+			int obj = lua_absindex(L2, -1);
+			for(int i = 1; i < idx; i++)
+			{
+				lua_pushvalue(L, i);
+				if(!source->marshal(L2, remote, true))
+				{
+					lua_settop(L2, obj - 1);
+					return luaL_argerror(L, i, "requires creating a proxy");
+				}
+			}
+			lua_rotate(L2, obj, idx - 1);
+			for(int i = idx + 1; i <= top; i++)
+			{
+				lua_pushvalue(L, i);
+				if(!source->marshal(L2, remote, true))
+				{
+					lua_settop(L2, obj - 1);
+					return luaL_argerror(L, i, "requires creating a proxy");
+				}
+			}
+
+			int err = lua::parith(L2, Op);
+			remote->marshal(L, source);
+
+			if(err != LUA_OK)
+			{
+				return lua::error(L);
+			}
+			return 1;
+		}
+		lua_pushnil(L);
+		return 1;
+	}
+
+	int concat(lua_State *L, int idx)
+	{
+		if(auto remote = connect(L))
+		{
+			auto L2 = remote->L;
+			int top = lua_gettop(L);
+			if(!lua_checkstack(L2, top + 4))
+			{
+				return luaL_error(L, "stack overflow");
+			}
+			int obj = lua_absindex(L2, -1);
+			for(int i = 1; i < idx; i++)
+			{
+				lua_pushvalue(L, i);
+				if(!source->marshal(L2, remote, true))
+				{
+					lua_settop(L2, obj - 1);
+					return luaL_argerror(L, i, "requires creating a proxy");
+				}
+			}
+			lua_rotate(L2, obj, idx - 1);
+			for(int i = idx + 1; i <= top; i++)
+			{
+				lua_pushvalue(L, i);
+				if(!source->marshal(L2, remote, true))
+				{
+					lua_settop(L2, obj - 1);
+					return luaL_argerror(L, i, "requires creating a proxy");
+				}
+			}
+			
+			int err = lua::pconcat(L2, top);
+			remote->marshal(L, source);
+
+			if(err != LUA_OK)
+			{
+				return lua::error(L);
+			}
+			return 1;
+		}
+		lua_pushnil(L);
+		return 1;
+	}
+
+	template <int (lua_foreign_reference::*Method)(lua_State *L)>
+	static int op(lua_State *L)
+	{
+		return (lua::touserdata<lua_foreign_reference>(L, 1).*Method)(L);
+	}
+
+	template <int (lua_foreign_reference::*Method)(lua_State *L, int idx)>
+	static int opcheck(lua_State *L)
+	{
+		int idx = 0;
+		for(int i = 1; i <= lua_gettop(L); i++)
+		{
+			if(isproxy(L, i))
+			{
+				idx = i;
+				break;
+			}
+		}
+		return (lua::touserdata<lua_foreign_reference>(L, idx).*Method)(L, idx);
+	}
 };
 
-bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller)
+template <>
+struct lua::mt_ctor<lua_foreign_reference>
+{
+	bool operator()(lua_State *L)
+	{
+		if(lua_rawgetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY) == LUA_TTABLE)
+		{
+			return true;
+		}
+		lua_pop(L, 1);
+
+		lua_createtable(L, 0, 24 + 2);
+		lua_pushvalue(L, -1);
+		lua_rawsetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY);
+
+		lua_pushstring(L, "proxy");
+		lua_setfield(L, -2, "__name");
+		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::index>);
+		lua_setfield(L, -2, "__index");
+		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::newindex>);
+		lua_setfield(L, -2, "__newindex");
+		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::call>);
+		lua_setfield(L, -2, "__call");
+		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::len>);
+		lua_setfield(L, -2, "__len");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::concat>);
+		lua_setfield(L, -2, "__concat");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPEQ>>);
+		lua_setfield(L, -2, "__eq");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLT>>);
+		lua_setfield(L, -2, "__lt");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLE>>);
+		lua_setfield(L, -2, "__le");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPADD>>);
+		lua_setfield(L, -2, "__add");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSUB>>);
+		lua_setfield(L, -2, "__sub");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMUL>>);
+		lua_setfield(L, -2, "__mul");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPDIV>>);
+		lua_setfield(L, -2, "__div");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMOD>>);
+		lua_setfield(L, -2, "__mod");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPPOW>>);
+		lua_setfield(L, -2, "__pow");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPUNM>>);
+		lua_setfield(L, -2, "__unm");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPIDIV>>);
+		lua_setfield(L, -2, "__idiv");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBAND>>);
+		lua_setfield(L, -2, "__band");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBOR>>);
+		lua_setfield(L, -2, "__bor");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBXOR>>);
+		lua_setfield(L, -2, "__bxor");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBNOT>>);
+		lua_setfield(L, -2, "__bnot");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHL>>);
+		lua_setfield(L, -2, "__shl");
+		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHR>>);
+		lua_setfield(L, -2, "__shr");
+
+		return true;
+	}
+};
+
+bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy)
 {
 	if(L == to)
 	{
@@ -281,6 +486,7 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 	}
 	if(lua_rawgeti(L, LUA_REGISTRYINDEX, ptrtable) != LUA_TTABLE)
 	{
+		lua_pop(L, 1);
 		return false;
 	}
 	lua_insert(L, -2);
@@ -327,64 +533,29 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 		}
 		case LUA_TUSERDATA:
 		{
-			if(lua_getmetatable(L, top))
+			if(isproxy(L, top))
 			{
-				bool isproxy = lua_rawgetp(L, -1, &PROXYMTKEY) != LUA_TNIL;
-				lua_pop(L, 2);
-
-				if(isproxy)
+				auto &ref = lua::touserdata<lua_foreign_reference>(L, top);
+				if(ref.duplicate(to, marshaller, noproxy, L))
 				{
-					auto &ref = lua::touserdata<lua_foreign_reference>(L, top);
-					if(ref.duplicate(to, marshaller))
-					{
-						lua_remove(L, top);
-						break;
-					}
+					lua_remove(L, top);
+					break;
 				}
 			}
 			//goto case default;
 		}
 		default:
 		{
+			if(noproxy)
+			{
+				lua_remove(L, t);
+				return false;
+			}
 			int obj = luaL_ref(L, t);
 			auto &ref = lua::newuserdata<lua_foreign_reference>(to);
 			ref.obj = obj;
 			ref.source = marshaller;
 			ref.remote_weak = getself();
-
-			if(lua_getmetatable(to, -1))
-			{
-				lua_pushboolean(to, true);
-				lua_rawsetp(to, -2, &PROXYMTKEY);
-				lua_pushstring(to, "proxy");
-				lua_setfield(to, -2, "__name");
-				lua_pushcfunction(to, [](lua_State *L)
-				{
-					return lua::touserdata<lua_foreign_reference>(L, 1).index(L);
-				});
-				lua_setfield(to, -2, "__index");
-				lua_pushcfunction(to, [](lua_State *L)
-				{
-					return lua::touserdata<lua_foreign_reference>(L, 1).newindex(L);
-				});
-				lua_setfield(to, -2, "__newindex");
-				lua_pushcfunction(to, [](lua_State *L)
-				{
-					return lua::touserdata<lua_foreign_reference>(L, 1).call(L);
-				});
-				lua_setfield(to, -2, "__call");
-				lua_pushcfunction(to, [](lua_State *L)
-				{
-					return lua::touserdata<lua_foreign_reference>(L, 1).len(L);
-				});
-				lua_setfield(to, -2, "__len");
-				lua_pushcfunction(to, [](lua_State *L)
-				{
-					return lua::touserdata<lua_foreign_reference>(L, 1).eq(L);
-				});
-				lua_setfield(to, -2, "__eq");
-				lua_pop(to, 1);
-			}
 			break;
 		}
 	}
@@ -520,6 +691,13 @@ int lua::remote::loader(lua_State *L)
 
 	lua_pushcfunction(L, unregister);
 	lua_setfield(L, table, "unregister");
+
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		lua_pushboolean(L, isproxy(L, 1));
+		return 1;
+	});
+	lua_setfield(L, table, "isproxy");
 
 	return 1;
 }

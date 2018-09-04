@@ -7,6 +7,15 @@
 
 namespace lua
 {
+	template <class Type>
+	struct mt_ctor
+	{
+		bool operator()(lua_State *L)
+		{
+			return false;
+		}
+	};
+
 	int amx_error(lua_State *L, int error);
 	int amx_error(lua_State *L, int error, int retval);
 	int amx_sleep(lua_State *L, int value, int cont);
@@ -63,9 +72,14 @@ namespace lua
 		{
 			new (data) Type(std::forward<Args>(args)...);
 		}
+		bool hasmt = mt_ctor<Type>()(L);
 		if(!std::is_trivially_destructible<Type>::value)
 		{
-			lua_createtable(L, 0, 2);
+			if(!hasmt)
+			{
+				lua_createtable(L, 0, 2);
+				hasmt = true;
+			}
 			lua_pushboolean(L, false);
 			lua_setfield(L, -2, "__metatable");
 			lua_pushcfunction(L, [](lua_State *L) {
@@ -73,6 +87,9 @@ namespace lua
 				return 0;
 			});
 			lua_setfield(L, -2, "__gc");
+		}
+		if(hasmt)
+		{
 			lua_setmetatable(L, -2);
 		}
 		return *data;
@@ -145,6 +162,10 @@ namespace lua
 
 	int pcompare(lua_State *L, int idx1, int idx2, int op);
 
+	int parith(lua_State *L, int op);
+
+	int pconcat(lua_State *L, int n);
+
 	int plen(lua_State *L, int idx);
 
 	typedef std::function<void*(void *ptr, size_t osize, size_t nsize)> Alloc;
@@ -163,6 +184,8 @@ namespace lua
 		jumpguard(lua_State *L);
 		~jumpguard();
 	};
+
+	int error(lua_State *L);
 }
 
 #endif
