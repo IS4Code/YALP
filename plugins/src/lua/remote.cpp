@@ -216,7 +216,7 @@ struct lua_foreign_reference
 
 			return numresults;
 		}
-		return 0;
+		return luaL_error(L, "the proxy is dead");
 	}
 
 	int len(lua_State *L)
@@ -237,7 +237,7 @@ struct lua_foreign_reference
 			}
 			return 1;
 		}
-		return 0;
+		return luaL_error(L, "the proxy is dead");
 	}
 
 	template <int Op>
@@ -292,8 +292,12 @@ struct lua_foreign_reference
 			}
 			return 1;
 		}
-		lua_pushboolean(L, false);
-		return 1;
+		if(Op == LUA_OPEQ)
+		{
+			lua_pushboolean(L, false);
+			return 1;
+		}
+		return luaL_error(L, "the proxy is dead");
 	}
 
 	template <int Op>
@@ -337,8 +341,7 @@ struct lua_foreign_reference
 			}
 			return 1;
 		}
-		lua_pushnil(L);
-		return 1;
+		return luaL_error(L, "the proxy is dead");
 	}
 
 	int concat(lua_State *L, int idx)
@@ -381,8 +384,7 @@ struct lua_foreign_reference
 			}
 			return 1;
 		}
-		lua_pushnil(L);
-		return 1;
+		return luaL_error(L, "the proxy is dead");
 	}
 
 	template <int (lua_foreign_reference::*Method)(lua_State *L)>
@@ -698,6 +700,21 @@ int lua::remote::loader(lua_State *L)
 		return 1;
 	});
 	lua_setfield(L, table, "isproxy");
+
+	lua_pushcfunction(L, [](lua_State *L)
+	{
+		if(!isproxy(L, 1)) return lua::argerrortype(L, 1, "proxy");
+		auto &proxy = lua::touserdata<lua_foreign_reference>(L, 1);
+		if(auto remote = proxy.connect(L))
+		{
+			lua_pop(remote->L, 1);
+			lua_pushboolean(L, true);
+		}else{
+			lua_pushboolean(L, false);
+		}
+		return 1;
+	});
+	lua_setfield(L, table, "isalive");
 
 	return 1;
 }
