@@ -52,7 +52,7 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 	return reinterpret_cast<cell>(L);
 }
 
-// native lua_dostring(Lua:L, str[]);
+// native lua_dostring(Lua:L, const str[]);
 static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 {
 	auto L = reinterpret_cast<lua_State*>(params[1]);
@@ -133,7 +133,7 @@ static cell AMX_NATIVE_CALL n_lua_load(AMX *amx, cell *params)
 		amx_RaiseError(amx, error);
 		return 0;
 	}
-		
+	
 	int index;
 	error = amx_FindPublic(amx, reader, &index);
 	if(error != AMX_ERR_NONE)
@@ -141,7 +141,7 @@ static cell AMX_NATIVE_CALL n_lua_load(AMX *amx, cell *params)
 		amx_RaiseError(amx, error);
 		return 0;
 	}
-		
+	
 	bool last = false;
 	int result = lua::load(L, [&](lua_State *L, size_t *size)
 	{

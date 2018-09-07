@@ -21,6 +21,13 @@ int asinteger(lua_State *L)
 	return 1;
 }
 
+int asuinteger(lua_State *L)
+{
+	auto ptr = lua::checklightudata(L, 1);
+	lua_pushinteger(L, reinterpret_cast<ucell>(ptr));
+	return 1;
+}
+
 int asboolean(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
@@ -69,6 +76,8 @@ void lua::interop::init_result(lua_State *L, AMX *amx)
 	lua_setfield(L, table, "asnil");
 	lua_pushcfunction(L, asinteger);
 	lua_setfield(L, table, "asinteger");
+	lua_pushcfunction(L, asuinteger);
+	lua_setfield(L, table, "asuinteger");
 	lua_pushcfunction(L, asboolean);
 	lua_setfield(L, table, "asboolean");
 	lua_pushcfunction(L, asfloat);

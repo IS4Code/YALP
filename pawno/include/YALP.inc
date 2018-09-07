@@ -32,7 +32,7 @@ const lua_lib:lua_baselibs = lua_lib_base | lua_lib_package | lua_lib_coroutine 
 const lua_lib:lua_newlibs = lua_lib_interop | lua_lib_timer | lua_lib_remote;
 
 native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
-native lua_dostring(Lua:L, str[]);
+native lua_dostring(Lua:L, const str[]);
 native bool:lua_close(Lua:L);
 native lua_load(Lua:L, const reader[], data, bufsize=-1, chunkname[]="");
 native lua_pcall(Lua:L, nargs, nresults, errfunc=0);

@@ -303,7 +303,12 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							amx->error = AMX_ERR_NONE;
 							if(lua_isinteger(L, -1))
 							{
-								amx->pri = (cell)lua_tointeger(L, -1);
+								auto num = lua_tointeger(L, -1);
+								if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+								{
+									logprintf("warning: cannot marshal return value (%lld cannot be stored in a single cell)", (long long)num);
+								}
+								amx->pri = (cell)num;
 							}else if(lua::isnumber(L, -1))
 							{
 								float num = (float)lua_tonumber(L, -1);
@@ -317,7 +322,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 							}else{
 								if(!lua_isnil(L, -1))
 								{
-									logprintf("warning: cannot marshal return type");
+									logprintf("warning: cannot marshal return type %s", luaL_typename(L, -1));
 								}
 								amx->pri = 0;
 							}

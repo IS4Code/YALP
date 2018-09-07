@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include <limits>
 
 static std::unordered_map<AMX*, std::shared_ptr<struct amx_native_info>> amx_map;
 static std::unordered_set<cell> addr_set;
@@ -75,7 +76,12 @@ int __call(lua_State *L)
 			
 				if(lua_isinteger(L, i))
 				{
-					value = (cell)lua_tointeger(L, i);
+					auto num = lua_tointeger(L, i);
+					if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+					{
+						return lua::argerror(L, i, "%I cannot be stored in a single cell", num);
+					}
+					value = (cell)num;
 				}else if(lua::isnumber(L, i))
 				{
 					float num = (float)lua_tonumber(L, i);
