@@ -13,9 +13,13 @@ int newbuffer(lua_State *L)
 	{
 		return luaL_argerror(L, 1, "out of range");
 	}
+	bool zero = luaL_opt(L, lua::checkboolean, 2, true);
 	auto size = (size_t)isize * sizeof(cell);
 	auto buf = lua_newuserdata(L, size);
-	std::memset(buf, 0, size);
+	if(zero)
+	{
+		std::memset(buf, 0, size);
+	}
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_setmetatable(L, -2);
 	return 1;

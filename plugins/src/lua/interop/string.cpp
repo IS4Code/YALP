@@ -109,6 +109,29 @@ int asstring(lua_State *L)
 	return 1;
 }
 
+int tocellstring(lua_State *L)
+{
+	size_t length;
+	const char *str = luaL_checklstring(L, 1, &length);
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_pushinteger(L, length + 1);
+	lua_pushboolean(L, false);
+	lua_call(L, 2, 1);
+	auto ptr = reinterpret_cast<cell*>(lua_touserdata(L, -1));
+	for(size_t i = 0; i < length; i++)
+	{
+		char c = str[i];
+		if(c == '\0')
+		{
+			ptr[i] = 0xFFFF00;
+		}else{
+			ptr[i] = c;
+		}
+	}
+	ptr[length] = 0;
+	return 1;
+}
+
 void lua::interop::init_string(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -122,4 +145,8 @@ void lua::interop::init_string(lua_State *L, AMX *amx)
 	lua_pushlightuserdata(L, amx);
 	lua_pushcclosure(L, asstring, 1);
 	lua_setfield(L, table, "asstring");
+
+	lua_getfield(L, table, "newbuffer");
+	lua_pushcclosure(L, tocellstring, 1);
+	lua_setfield(L, table, "tocellstring");
 }
