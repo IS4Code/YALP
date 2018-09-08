@@ -188,7 +188,7 @@ int lua::interop::loader(lua_State *L)
 	}else{
 		info.fs_name = "?luafs_";
 		info.fs_name.append(std::to_string(reinterpret_cast<intptr_t>(&info)));
-		amx = amx::LoadNew(info.fs_name.c_str(), 1024, sNAMEMAX, std::move(loader));
+		amx = amx::LoadNew(info.fs_name.c_str(), 8192, sNAMEMAX, std::move(loader));
 		if(!amx)
 		{
 			lua_pop(L, 1);
