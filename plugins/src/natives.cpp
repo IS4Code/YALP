@@ -303,10 +303,16 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 	if(ret)
 	{
 		amx_RaiseError(amx, AMX_ERR_SLEEP);
+		return ret;
 	}else{
-		amx_RaiseError(amx, AMX_ERR_NATIVE);
+		if(lua_gettop(L) == 0 || !lua_isfunction(L, -1))
+		{
+			lua_pushstring(L, "a function must be provided");
+		}else{
+			lua_pushstring(L, "this Lua state is already bound to an AMX");
+		}
 	}
-	return ret;
+	return 0;
 }
 
 

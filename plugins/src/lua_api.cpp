@@ -291,7 +291,7 @@ std::unordered_map<lua_State*, std::weak_ptr<AMX*>> init_map;
 
 cell lua::init_bind(lua_State *L, AMX *amx)
 {
-	if(!lua_isfunction(L, -1)) return 0;
+	if(lua_gettop(L) == 0 || !lua_isfunction(L, -1)) return 0;
 	auto it = init_map.find(L);
 	if(it != init_map.end() && !it->second.expired()) return 0;
 	bind_map[amx] = L;
