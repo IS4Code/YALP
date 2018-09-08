@@ -4,6 +4,7 @@
 #include "lua/interop.h"
 #include "lua/remote.h"
 #include "main.h"
+
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -45,14 +46,14 @@ static int custom_print(lua_State *L)
 	return 0;
 }
 
-int take(lua_State *L)
+static int take(lua_State *L)
 {
 	int numrets = (int)luaL_checkinteger(L, 1);
 	int numargs = lua_gettop(L) - 2;
 	return lua::tailcall(L, numargs, numrets);
 }
 
-int bind(lua_State *L)
+static int bind(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	lua_pushinteger(L, lua_gettop(L));
@@ -71,7 +72,7 @@ int bind(lua_State *L)
 	return 1;
 }
 
-int clear(lua_State *L)
+static int clear(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_pushnil(L);
@@ -85,7 +86,21 @@ int clear(lua_State *L)
 	return 0;
 }
 
-int async(lua_State *L)
+static int copy(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TTABLE);
+	luaL_checktype(L, 2, LUA_TTABLE);
+	lua_pushnil(L);
+	while(lua_next(L, 1))
+	{
+		lua_pushvalue(L, -2);
+		lua_insert(L, -3);
+		lua_settable(L, 2);
+	}
+	return 0;
+}
+
+static int async(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	lua_newthread(L);
@@ -136,7 +151,45 @@ int async(lua_State *L)
 	return lua::tailcall(L, lua_gettop(L) - 1);
 }
 
-int open_base(lua_State *L)
+static int import(lua_State *L)
+{
+	lua_Debug ar;
+	if(!lua_getstack(L, 1, &ar))
+	{
+		return luaL_error(L, "stack not available");
+	}
+	lua_getinfo(L, "S", &ar);
+	if(ar.what[0] == 'C' && ar.what[1] == '\0')
+	{
+		return luaL_error(L, "must be called from a Lua function");
+	}
+	
+	int numlibs = lua_gettop(L);
+	int idx = 0;
+	luaL_checkstack(L, 3, nullptr);
+	while(auto name = lua_getlocal(L, &ar, ++idx))
+	{
+		if(lua_isnil(L, -1))
+		{
+			lua_pushstring(L, name);
+			for(int i = 1; i <= numlibs; i++)
+			{
+				lua_pushvalue(L, -1);
+				if(lua_gettable(L, i) != LUA_TNIL)
+				{
+					lua_setlocal(L, &ar, idx);
+					break;
+				}
+				lua_pop(L, 1);
+			}
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1);
+	}
+	return 0;
+}
+
+static int open_base(lua_State *L)
 {
 	luaopen_base(L);
 	lua_pushcfunction(L, custom_print);
@@ -147,18 +200,22 @@ int open_base(lua_State *L)
 	lua_setfield(L, -2, "bind");
 	lua_pushcfunction(L, async);
 	lua_setfield(L, -2, "async");
+	lua_pushcfunction(L, import);
+	lua_setfield(L, -2, "import");
 	return 1;
 }
 
-int open_table(lua_State *L)
+static int open_table(lua_State *L)
 {
 	luaopen_table(L);
 	lua_pushcfunction(L, clear);
 	lua_setfield(L, -2, "clear");
+	lua_pushcfunction(L, copy);
+	lua_setfield(L, -2, "copy");
 	return 1;
 }
 
-std::vector<std::pair<const char*, lua_CFunction>> libs = {
+static std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{"_G", open_base},
 	{LUA_LOADLIBNAME, luaopen_package},
 	{LUA_COLIBNAME, luaopen_coroutine},
