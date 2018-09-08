@@ -2,6 +2,7 @@
 #include "lua_utils.h"
 #include "amxutils.h"
 
+#include <memory>
 #include <vector>
 #include <cstring>
 #include <functional>
@@ -448,7 +449,7 @@ int vacall(lua_State *L)
 
 		bool restore = lua::numresults(L) != 0;
 
-		std::vector<void(*)(lua_State *L, cell value)> restorers;
+		auto restorers = std::make_shared<std::vector<void(*)(lua_State *L, cell value)>>();
 
 		int args = lua_gettop(L);
 		for(int i = 1; i <= args; i++)
@@ -463,20 +464,20 @@ int vacall(lua_State *L)
 			if(lua_isinteger(L, i))
 			{
 				value = (cell)lua_tointeger(L, i);
-				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
+				if(restore) restorers->push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
 			}else if(lua::isnumber(L, i))
 			{
 				float num = (float)lua_tonumber(L, i);
 				value = amx_ftoc(num);
-				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushnumber(L, amx_ctof(value)); });
+				if(restore) restorers->push_back([](lua_State *L, cell value){ lua_pushnumber(L, amx_ctof(value)); });
 			}else if(lua_isboolean(L, i))
 			{
 				value = lua_toboolean(L, i);
-				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushboolean(L, value); });
+				if(restore) restorers->push_back([](lua_State *L, cell value){ lua_pushboolean(L, value); });
 			}else if(lua_islightuserdata(L, i))
 			{
 				value = reinterpret_cast<cell>(lua_touserdata(L, i));
-				if(restore) restorers.push_back([](lua_State *L, cell value){ lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
+				if(restore) restorers->push_back([](lua_State *L, cell value){ lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
 			}else{
 				continue;
 			}
@@ -495,7 +496,7 @@ int vacall(lua_State *L)
 			lua_pushvalue(L, lua_upvalueindex(2 + i));
 		}
 		lua_rotate(L, 1, num);
-		return lua::pcallk(L, lua_gettop(L) - 1, restore ? LUA_MULTRET : 0, 0, [=, restorers{std::move(restorers)}](lua_State *L, int status)
+		return lua::pcallk(L, lua_gettop(L) - 1, restore ? LUA_MULTRET : 0, 0, [=](lua_State *L, int status)
 		{
 			int heapsize = (amx->hea - old_hea) / sizeof(cell);
 			amx->hea = old_hea;
@@ -507,7 +508,7 @@ int vacall(lua_State *L)
 					int nr = lua::numresults(L);
 					if(nr == LUA_MULTRET)
 					{
-						nr = restorers.size();
+						nr = restorers->size();
 					}else{
 						nr -= lua_gettop(L);
 					}
@@ -519,7 +520,7 @@ int vacall(lua_State *L)
 					luaL_checkstack(L, nr, nullptr);
 					for(int i = 0; i < nr; i++)
 					{
-						restorers[i](L, heap[i]);
+						(*restorers)[i](L, heap[i]);
 					}
 					return lua_gettop(L);
 				}

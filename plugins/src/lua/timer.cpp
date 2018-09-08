@@ -133,7 +133,7 @@ int settimer(lua_State *L)
 	return 0;
 }
 
-static const char HOOKKEY;
+static const char HOOKKEY = 0;
 
 bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 {

@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <unordered_map>
 
+#ifdef _WIN32
+#define bswap32 _byteswap_ulong
+#else
+#define bswap32 __builtin_bswap32
+#endif
+
 const char *amx::StrError(int errnum)
 {
 	static const char *messages[] = {
@@ -97,7 +103,7 @@ void amx::SetString(cell *dest, const char *source, size_t len, bool pack)
 
 		while(len-- > 0)
 		{
-			*dest = _byteswap_ulong(*dest);
+			*dest = bswap32(*dest);
 			dest++;
 		}
 	}

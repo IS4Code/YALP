@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstring>
+#include <limits>
 
 static std::unordered_map<AMX*, std::weak_ptr<struct amx_public_info>> amx_map;
 

@@ -3,10 +3,12 @@
 #include "lua_api.h"
 #include "lua_utils.h"
 #include "lua_adapt.h"
+
 #include <string>
 #include <iomanip>
 #include <bitset>
 #include <cctype>
+#include <cstring>
 #include <sstream>
 
 // native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
@@ -730,7 +732,7 @@ static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
 }
 
 #define AMX_DECLARE_NATIVE(Name) {#Name, error_wrapper<n_##Name>}
-#define AMX_DECLARE_LUA_NATIVE(Name) {#Name, error_wrapper<lua::adapt<decltype(Name), Name>::native>}
+#define AMX_DECLARE_LUA_NATIVE(Name) {#Name, error_wrapper<lua::adapt<decltype(&Name), &Name>::native>}
 
 static AMX_NATIVE_INFO native_list[] =
 {

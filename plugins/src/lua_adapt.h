@@ -175,8 +175,8 @@ namespace lua
 
 	};
 
-	template <void(Func)(lua_State *L)>
-	struct adapt<void(lua_State *L), Func>
+	template <void(*Func)(lua_State *L)>
+	struct adapt<void(*)(lua_State *L), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
@@ -187,8 +187,8 @@ namespace lua
 	};
 
 
-	template <class Return, Return(Func)(lua_State *L)>
-	struct adapt<Return(lua_State *L), Func>
+	template <class Return, Return(*Func)(lua_State *L)>
+	struct adapt<Return(*)(lua_State *L), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
@@ -197,8 +197,8 @@ namespace lua
 		}
 	};
 
-	template <class Arg1, void(Func)(lua_State *L, Arg1)>
-	struct adapt<void(lua_State *L, Arg1), Func>
+	template <class Arg1, void(*Func)(lua_State *L, Arg1)>
+	struct adapt<void(*)(lua_State *L, Arg1), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
@@ -208,8 +208,8 @@ namespace lua
 		}
 	};
 
-	template <class Return, class Arg1, Return(Func)(lua_State *L, Arg1)>
-	struct adapt<Return(lua_State *L, Arg1), Func>
+	template <class Return, class Arg1, Return(*Func)(lua_State *L, Arg1)>
+	struct adapt<Return(*)(lua_State *L, Arg1), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
@@ -218,8 +218,8 @@ namespace lua
 		}
 	};
 
-	template <class Arg1, class Arg2, void(Func)(lua_State *L, Arg1, Arg2)>
-	struct adapt<void(lua_State *L, Arg1, Arg2), Func>
+	template <class Arg1, class Arg2, void(*Func)(lua_State *L, Arg1, Arg2)>
+	struct adapt<void(*)(lua_State *L, Arg1, Arg2), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
@@ -229,8 +229,8 @@ namespace lua
 		}
 	};
 
-	template <class Return, class Arg1, class Arg2, Return(Func)(lua_State *L, Arg1, Arg2)>
-	struct adapt<Return(lua_State *L, Arg1, Arg2), Func>
+	template <class Return, class Arg1, class Arg2, Return(*Func)(lua_State *L, Arg1, Arg2)>
+	struct adapt<Return(*)(lua_State *L, Arg1, Arg2), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{

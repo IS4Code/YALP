@@ -48,7 +48,7 @@ struct lua_ref_info
 	}
 };
 
-static const char PROXYMTKEY;
+static const char PROXYMTKEY = 0;
 
 bool isproxy(lua_State *L, int idx)
 {
@@ -409,71 +409,74 @@ struct lua_foreign_reference
 	}
 };
 
-template <>
-struct lua::mt_ctor<lua_foreign_reference>
+namespace lua
 {
-	bool operator()(lua_State *L)
+	template <>
+	struct mt_ctor<lua_foreign_reference>
 	{
-		if(lua_rawgetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY) == LUA_TTABLE)
+		bool operator()(lua_State *L)
 		{
+			if(lua_rawgetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY) == LUA_TTABLE)
+			{
+				return true;
+			}
+			lua_pop(L, 1);
+
+			lua_createtable(L, 0, 24 + 2);
+			lua_pushvalue(L, -1);
+			lua_rawsetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY);
+
+			lua_pushstring(L, "proxy");
+			lua_setfield(L, -2, "__name");
+			lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::index>);
+			lua_setfield(L, -2, "__index");
+			lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::newindex>);
+			lua_setfield(L, -2, "__newindex");
+			lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::call>);
+			lua_setfield(L, -2, "__call");
+			lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::len>);
+			lua_setfield(L, -2, "__len");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::concat>);
+			lua_setfield(L, -2, "__concat");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPEQ>>);
+			lua_setfield(L, -2, "__eq");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLT>>);
+			lua_setfield(L, -2, "__lt");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLE>>);
+			lua_setfield(L, -2, "__le");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPADD>>);
+			lua_setfield(L, -2, "__add");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSUB>>);
+			lua_setfield(L, -2, "__sub");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMUL>>);
+			lua_setfield(L, -2, "__mul");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPDIV>>);
+			lua_setfield(L, -2, "__div");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMOD>>);
+			lua_setfield(L, -2, "__mod");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPPOW>>);
+			lua_setfield(L, -2, "__pow");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPUNM>>);
+			lua_setfield(L, -2, "__unm");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPIDIV>>);
+			lua_setfield(L, -2, "__idiv");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBAND>>);
+			lua_setfield(L, -2, "__band");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBOR>>);
+			lua_setfield(L, -2, "__bor");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBXOR>>);
+			lua_setfield(L, -2, "__bxor");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBNOT>>);
+			lua_setfield(L, -2, "__bnot");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHL>>);
+			lua_setfield(L, -2, "__shl");
+			lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHR>>);
+			lua_setfield(L, -2, "__shr");
+
 			return true;
 		}
-		lua_pop(L, 1);
-
-		lua_createtable(L, 0, 24 + 2);
-		lua_pushvalue(L, -1);
-		lua_rawsetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY);
-
-		lua_pushstring(L, "proxy");
-		lua_setfield(L, -2, "__name");
-		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::index>);
-		lua_setfield(L, -2, "__index");
-		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::newindex>);
-		lua_setfield(L, -2, "__newindex");
-		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::call>);
-		lua_setfield(L, -2, "__call");
-		lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::len>);
-		lua_setfield(L, -2, "__len");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::concat>);
-		lua_setfield(L, -2, "__concat");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPEQ>>);
-		lua_setfield(L, -2, "__eq");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLT>>);
-		lua_setfield(L, -2, "__lt");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::cmp<LUA_OPLE>>);
-		lua_setfield(L, -2, "__le");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPADD>>);
-		lua_setfield(L, -2, "__add");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSUB>>);
-		lua_setfield(L, -2, "__sub");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMUL>>);
-		lua_setfield(L, -2, "__mul");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPDIV>>);
-		lua_setfield(L, -2, "__div");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPMOD>>);
-		lua_setfield(L, -2, "__mod");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPPOW>>);
-		lua_setfield(L, -2, "__pow");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPUNM>>);
-		lua_setfield(L, -2, "__unm");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPIDIV>>);
-		lua_setfield(L, -2, "__idiv");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBAND>>);
-		lua_setfield(L, -2, "__band");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBOR>>);
-		lua_setfield(L, -2, "__bor");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBXOR>>);
-		lua_setfield(L, -2, "__bxor");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPBNOT>>);
-		lua_setfield(L, -2, "__bnot");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHL>>);
-		lua_setfield(L, -2, "__shl");
-		lua_pushcfunction(L, lua_foreign_reference::opcheck<&lua_foreign_reference::arith<LUA_OPSHR>>);
-		lua_setfield(L, -2, "__shr");
-
-		return true;
-	}
-};
+	};
+}
 
 bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy)
 {

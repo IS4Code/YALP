@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <memory>
 #include <limits>
+#include <vector>
+#include <cstring>
 
 static std::unordered_map<AMX*, std::shared_ptr<struct amx_native_info>> amx_map;
 static std::unordered_set<cell> addr_set;
@@ -211,7 +213,7 @@ int getnative(lua_State *L)
 	if(it != info->natives.end())
 	{
 		lua_pushvalue(L, lua_upvalueindex(1));
-		lua_pushlightuserdata(L, it->second);
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(it->second));
 		lua_pushvalue(L, lua_upvalueindex(2));
 		lua_pushcclosure(L, __call, 3);
 		return 1;

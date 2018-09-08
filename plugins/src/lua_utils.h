@@ -5,6 +5,14 @@
 #include <type_traits>
 #include <functional>
 
+#if __GNUG__ && __GNUC__ < 5
+#define is_trivially_constructible(T) __has_trivial_constructor(T)
+#define is_trivially_destructible(T) __has_trivial_destructor(T)
+#else
+#define is_trivially_constructible(T) std::is_trivially_constructible<T>::value
+#define is_trivially_destructible(T) std::is_trivially_destructible<T>::value
+#endif
+
 namespace lua
 {
 	template <class Type>
@@ -64,16 +72,16 @@ namespace lua
 		return _udata<Type>::check(L, idx, tname);
 	}
 
-	template <class Type, class... Args>
-	Type &newuserdata(lua_State *L, Args &&...args)
+	template <class Type>
+	Type &newuserdata(lua_State *L)
 	{
 		auto data = reinterpret_cast<Type*>(lua_newuserdata(L, sizeof(Type)));
-		if(!std::is_trivially_constructible<Type, Args...>::value)
+		if(!is_trivially_constructible(Type))
 		{
-			new (data) Type(std::forward<Args>(args)...);
+			new (data) Type();
 		}
 		bool hasmt = mt_ctor<Type>()(L);
-		if(!std::is_trivially_destructible<Type>::value)
+		if(!is_trivially_destructible(Type))
 		{
 			if(!hasmt)
 			{
@@ -101,7 +109,7 @@ namespace lua
 		newuserdata<Type>(L) = val;
 	}
 
-	template <class Type, class=std::enable_if<!std::is_lvalue_reference<Type>::value>::type>
+	template <class Type, class=typename std::enable_if<!std::is_lvalue_reference<Type>::value>::type>
 	void pushuserdata(lua_State *L, Type &&val)
 	{
 		newuserdata<typename std::remove_reference<Type>::type>(L) = std::move(val);
