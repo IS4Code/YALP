@@ -265,8 +265,8 @@ static int argcheck(lua_State *L)
 	const char *typecheckname, *argtypename;
 	if(typecheck >= LUA_TNIL)
 	{
-		typecheckname = lua_typename(L, typecheck);
-		argtypename = lua_typename(L, argtype);
+		typecheckname = typecheck == LUA_TLIGHTUSERDATA ? "light userdata" : lua_typename(L, typecheck);
+		argtypename = argtype == LUA_TLIGHTUSERDATA ? "light userdata" : lua_typename(L, argtype);
 	}else{
 		if(typecheck == -2)
 		{
@@ -289,12 +289,69 @@ static int argcheck(lua_State *L)
 		}
 	}
 
+	luaL_where(L, 2);
 	if(arg == -1)
 	{
-		return luaL_error(L, "bad argument to '%s' (%s expected, got %s)", ar.name, typecheckname, argtypename);
+		lua_pushfstring(L, "bad argument to '%s' (%s expected, got %s)", ar.name, typecheckname, argtypename);
 	}else{
-		return luaL_error(L, "bad argument #%d to '%s' (%s expected, got %s)", arg, ar.name, typecheckname, argtypename);
+		lua_pushfstring(L, "bad argument #%d to '%s' (%s expected, got %s)", arg, ar.name, typecheckname, argtypename);
 	}
+	lua_concat(L, 2);
+	return lua_error(L);
+}
+
+static int optcheck(lua_State *L)
+{
+	if(lua_toboolean(L, 1) || (!lua_isnoneornil(L, 1) && lua_type(L, 1) != LUA_TBOOLEAN))
+	{
+		lua_settop(L, 1);
+		return 1;
+	}
+
+	int arg = (int)luaL_optinteger(L, 3, -1);
+	lua_Debug ar;
+	lua_getstack(L, 1, &ar);
+	if(arg == -1)
+	{
+		lua_getinfo(L, "un", &ar);
+		bool found = false;
+		for(unsigned char i = 1; i <= ar.nparams; i++)
+		{
+			if(lua_getlocal(L, &ar, i))
+			{
+				if(lua_rawequal(L, 1, -1))
+				{
+					if(!found)
+					{
+						arg = i;
+						found = true;
+					}else{
+						arg = -1;
+						lua_pop(L, 1);
+						break;
+					}
+				}
+				lua_pop(L, 1);
+			}
+		}
+	}else{
+		lua_getinfo(L, "n", &ar);
+	}
+
+	auto option = lua_tostring(L, 2);
+	if(!option)
+	{
+		option = luaL_typename(L, 2);
+	}
+	luaL_where(L, 2);
+	if(arg == -1)
+	{
+		lua_pushfstring(L, "bad argument to '%s' (invalid option '%s')", ar.name, option);
+	}else{
+		lua_pushfstring(L, "bad argument #%d to '%s' (invalid option '%s')", arg, ar.name, option);
+	}
+	lua_concat(L, 2);
+	return lua_error(L);
 }
 
 static int open_base(lua_State *L)
@@ -315,7 +372,7 @@ static int open_base(lua_State *L)
 	for(int i = 0; i < LUA_NUMTAGS; i++)
 	{
 		lua_pushinteger(L, i);
-		lua_setfield(L, -2, lua_typename(L, i));
+		lua_setfield(L, -2, i == LUA_TLIGHTUSERDATA ? "light userdata" : lua_typename(L, i));
 	}
 	lua_pushinteger(L, -2);
 	lua_setfield(L, -2, "integer");
@@ -324,6 +381,9 @@ static int open_base(lua_State *L)
 
 	lua_pushcclosure(L, argcheck, 1);
 	lua_setfield(L, -2, "argcheck");
+
+	lua_pushcfunction(L, optcheck);
+	lua_setfield(L, -2, "optcheck");
 
 	return 1;
 }
