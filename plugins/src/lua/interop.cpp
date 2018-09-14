@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <limits>
 
 std::unordered_map<AMX*, std::weak_ptr<class amx_info>> amx_map;
 
@@ -159,6 +160,11 @@ int lua::interop::loader(lua_State *L)
 		amx_map[amx] = ptr;
 
 		lua_newtable(L);
+
+		lua_pushinteger(L, std::numeric_limits<cell>::min());
+		lua_setfield(L, -2, "cellmin");
+		lua_pushinteger(L, std::numeric_limits<cell>::max());
+		lua_setfield(L, -2, "cellmax");
 
 		lua_newtable(L);
 		lua_setfield(L, -2, "public");
