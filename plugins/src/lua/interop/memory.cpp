@@ -297,6 +297,8 @@ int heapalloc(lua_State *L)
 	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 	std::memset(data + offset, 0, (size_t)size);
 
+	if(lua::numresults(L) == 0) return 0;
+
 	lua_pushvalue(L, lua_upvalueindex(2));
 	lua_pushvalue(L, lua_upvalueindex(3));
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(offset));
