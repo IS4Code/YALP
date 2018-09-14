@@ -189,6 +189,114 @@ static int import(lua_State *L)
 	return 0;
 }
 
+static int argcheck(lua_State *L)
+{
+	luaL_checkstring(L, 2);
+	int arg = (int)luaL_optinteger(L, 3, -1);
+	lua_settop(L, 2);
+	lua_rawget(L, lua_upvalueindex(1));
+	int typecheck = (int)lua_tointeger(L, -1);
+	int argtype = lua_type(L, 1);
+	if((typecheck <= -2 || typecheck == LUA_TNUMBER) && argtype == LUA_TSTRING)
+	{
+		if(lua_isnumber(L, 1))
+		{
+			argtype = LUA_TNUMBER;
+		}
+	}
+	if(typecheck == argtype)
+	{
+		lua_settop(L, 1);
+		return 1;
+	}
+	if(typecheck == -2 && argtype == LUA_TNUMBER)
+	{
+		if(lua_isinteger(L, 1))
+		{
+			lua_settop(L, 1);
+			return 1;
+		}
+		auto num = lua_tonumber(L, 1);
+		auto intval = static_cast<lua_Integer>(num);
+		if(intval == num)
+		{
+			lua_pushinteger(L, intval);
+			return 1;
+		}
+	}else if(typecheck == -3 && argtype == LUA_TNUMBER)
+	{
+		if(!lua_isinteger(L, 1))
+		{
+			lua_settop(L, 1);
+			return 1;
+		}
+		lua_pushnumber(L, static_cast<lua_Number>(lua_tointeger(L, 1)));
+		return 1;
+	}
+
+	lua_Debug ar;
+	lua_getstack(L, 1, &ar);
+	if(arg == -1)
+	{
+		lua_getinfo(L, "un", &ar);
+		bool found = false;
+		for(unsigned char i = 1; i <= ar.nparams; i++)
+		{
+			if(lua_getlocal(L, &ar, i))
+			{
+				if(lua_rawequal(L, 1, -1))
+				{
+					if(!found)
+					{
+						arg = i;
+						found = true;
+					}else{
+						arg = -1;
+						lua_pop(L, 1);
+						break;
+					}
+				}
+				lua_pop(L, 1);
+			}
+		}
+	}else{
+		lua_getinfo(L, "n", &ar);
+	}
+	const char *typecheckname, *argtypename;
+	if(typecheck >= LUA_TNIL)
+	{
+		typecheckname = lua_typename(L, typecheck);
+		argtypename = lua_typename(L, argtype);
+	}else{
+		if(typecheck == -2)
+		{
+			typecheckname = "integer";
+			if(argtype == LUA_TNUMBER)
+			{
+				argtypename = "float";
+			}else{
+				argtypename = lua_typename(L, argtype);
+			}
+		}else if(typecheck == -3)
+		{
+			typecheckname = "float";
+			if(argtype == LUA_TNUMBER)
+			{
+				argtypename = "integer";
+			}else{
+				argtypename = lua_typename(L, argtype);
+			}
+		}
+	}
+
+	if(arg == -1)
+	{
+		return luaL_error(L, "bad argument to '%s' (%s expected, got %s)", ar.name, typecheckname, argtypename);
+	}else{
+		return luaL_error(L, "bad argument #%d to '%s' (%s expected, got %s)", arg, ar.name, typecheckname, argtypename);
+	}
+}
+
 static int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -202,6 +310,21 @@ static int open_base(lua_State *L)
 	lua_setfield(L, -2, "async");
 	lua_pushcfunction(L, import);
 	lua_setfield(L, -2, "import");
+
+	lua_createtable(L, 0, LUA_NUMTAGS + 2);
+	for(int i = 0; i < LUA_NUMTAGS; i++)
+	{
+		lua_pushinteger(L, i);
+		lua_setfield(L, -2, lua_typename(L, i));
+	}
+	lua_pushinteger(L, -2);
+	lua_setfield(L, -2, "integer");
+	lua_pushinteger(L, -3);
+	lua_setfield(L, -2, "float");
+
+	lua_pushcclosure(L, argcheck, 1);
+	lua_setfield(L, -2, "argcheck");
+
 	return 1;
 }
 
