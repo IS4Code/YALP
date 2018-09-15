@@ -72,7 +72,7 @@ static int bind(lua_State *L)
 	return 1;
 }
 
-static int clear(lua_State *L)
+static int table_clear(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_pushnil(L);
@@ -86,7 +86,7 @@ static int clear(lua_State *L)
 	return 0;
 }
 
-static int copy(lua_State *L)
+static int table_copy(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TTABLE);
 	luaL_checktype(L, 2, LUA_TTABLE);
@@ -354,6 +354,13 @@ static int optcheck(lua_State *L)
 	return lua_error(L);
 }
 
+static int debug_numresults(lua_State *L)
+{
+	int level = (int)luaL_optinteger(L, 1, 1);
+	lua_pushinteger(L, lua::numresults(L, level));
+	return 1;
+}
+
 static int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -391,10 +398,18 @@ static int open_base(lua_State *L)
 static int open_table(lua_State *L)
 {
 	luaopen_table(L);
-	lua_pushcfunction(L, clear);
+	lua_pushcfunction(L, table_clear);
 	lua_setfield(L, -2, "clear");
-	lua_pushcfunction(L, copy);
+	lua_pushcfunction(L, table_copy);
 	lua_setfield(L, -2, "copy");
+	return 1;
+}
+
+static int open_debug(lua_State *L)
+{
+	luaopen_debug(L);
+	lua_pushcfunction(L, debug_numresults);
+	lua_setfield(L, -2, "numresults");
 	return 1;
 }
 
@@ -408,7 +423,7 @@ static std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{LUA_STRLIBNAME, luaopen_string},
 	{LUA_MATHLIBNAME, luaopen_math},
 	{LUA_UTF8LIBNAME, luaopen_utf8},
-	{LUA_DBLIBNAME, luaopen_debug},
+	{LUA_DBLIBNAME, open_debug},
 	{"interop", lua::interop::loader},
 	{"timer", lua::timer::loader},
 	{"remote", lua::remote::loader},

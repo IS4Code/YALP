@@ -134,6 +134,7 @@ namespace lua
 	int psetfield(lua_State *L, int idx, const char *k);
 
 	short numresults(lua_State *L);
+	short numresults(lua_State *L, int level);
 
 	lua_State *mainthread(lua_State *L);
 

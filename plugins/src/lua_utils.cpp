@@ -163,8 +163,21 @@ int lua::psetfield(lua_State *L, int idx, const char *k)
 
 short lua::numresults(lua_State *L)
 {
-	if(!L->ci) return 0;
-	return L->ci->nresults;
+	return lua::numresults(L, 0);
+}
+
+short lua::numresults(lua_State *L, int level)
+{
+	CallInfo *ci;
+	for(ci = L->ci; level > 0 && ci != &L->base_ci; ci = ci->previous)
+	{
+		level--;
+	}
+	if(level == 0 && ci != &L->base_ci)
+	{
+		return ci->nresults;
+	}
+	return 0;
 }
 
 lua_State *lua::mainthread(lua_State *L)
