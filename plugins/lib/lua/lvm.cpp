@@ -1146,7 +1146,7 @@ void luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         lua_assert(GETARG_C(i) - 1 == LUA_MULTRET);
-        if (luaD_precall(L, ra, LUA_MULTRET)) {  /* C function? */
+        if (luaD_precall(L, ra, L->ci->nresults)) {  /* C function? */
           Protect((void)0);  /* update 'base' */
         }
         else {
