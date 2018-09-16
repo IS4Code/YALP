@@ -361,6 +361,20 @@ static int debug_numresults(lua_State *L)
 	return 1;
 }
 
+static int open_package(lua_State *L)
+{
+	luaopen_package(L);
+	lua_pushstring(L, "scriptfiles" LUA_DIRSEP "lua" LUA_DIRSEP "?.lua");
+	lua_setfield(L, -2, "path");
+#ifdef _WIN32
+	lua_pushstring(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.dll");
+#else
+	lua_pushstring(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.so");
+#endif
+	lua_setfield(L, -2, "cpath");
+	return 1;
+}
+
 static int open_base(lua_State *L)
 {
 	luaopen_base(L);
@@ -392,6 +406,9 @@ static int open_base(lua_State *L)
 	lua_pushcfunction(L, optcheck);
 	lua_setfield(L, -2, "optcheck");
 
+	open_package(L);
+	lua_pop(L, 1);
+
 	return 1;
 }
 
@@ -415,7 +432,7 @@ static int open_debug(lua_State *L)
 
 static std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{"_G", open_base},
-	{LUA_LOADLIBNAME, luaopen_package},
+	{LUA_LOADLIBNAME, open_package},
 	{LUA_COLIBNAME, luaopen_coroutine},
 	{LUA_TABLIBNAME, open_table},
 	{LUA_IOLIBNAME, luaopen_io},
@@ -429,7 +446,7 @@ static std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{"remote", lua::remote::loader},
 };
 
-void lua::init(lua_State *L, int load, int preload)
+void lua::initlibs(lua_State *L, int load, int preload)
 {
 	for(size_t i = 0; i < libs.size(); i++)
 	{
@@ -441,22 +458,18 @@ void lua::init(lua_State *L, int load, int preload)
 		}
 	}
 
-	if(lua_getglobal(L, "package") == LUA_TTABLE)
+	if(lua_getfield(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE) == LUA_TTABLE)
 	{
 		preload &= ~load;
-		if(lua_getfield(L, -1, "preload") == LUA_TTABLE)
+		for(size_t i = 0; i < libs.size(); i++)
 		{
-			for(size_t i = 0; i < libs.size(); i++)
+			if(preload & (1 << i))
 			{
-				if(preload & (1 << i))
-				{
-					const auto &lib = libs[i];
-					lua_pushcfunction(L, lib.second);
-					lua_setfield(L, -2, lib.first);
-				}
+				const auto &lib = libs[i];
+				lua_pushcfunction(L, lib.second);
+				lua_setfield(L, -2, lib.first);
 			}
 		}
-		lua_pop(L, 1);
 	}
 	lua_pop(L, 1);
 }

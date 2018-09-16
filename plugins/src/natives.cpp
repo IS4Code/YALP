@@ -49,7 +49,7 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 			});
 		}
 
-		lua::init(L, optparam(1, 0xCF), optparam(2, 0x1C00));
+		lua::initlibs(L, optparam(1, 0xCD), optparam(2, 0x1C00));
 	}
 	return reinterpret_cast<cell>(L);
 }

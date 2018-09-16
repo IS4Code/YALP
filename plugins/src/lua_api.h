@@ -6,7 +6,7 @@
 
 namespace lua
 {
-	void init(lua_State *L, int load, int preload);
+	void initlibs(lua_State *L, int load, int preload);
 	cell init_bind(lua_State *L, AMX *amx);
 	int bind(AMX *amx, cell *retval, int index);
 	void report_error(lua_State *L, int error);
