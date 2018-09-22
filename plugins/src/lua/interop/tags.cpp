@@ -47,94 +47,102 @@ bool getudatatag(lua_State *L, int idx, const char *&tagname)
 
 int tagof(lua_State *L)
 {
-	const char *tagname;
-	if(lua::isstring(L, 1))
-	{
-		tagname = lua_tostring(L, 1);
-	}else if(lua_isinteger(L, 1))
-	{
-		tagname = "";
-	}else if(lua_isboolean(L, 1))
-	{
-		tagname = "bool";
-	}else if(lua::isnumber(L, 1))
-	{
-		tagname = "Float";
-	}else if(lua_istable(L, 1))
-	{
-		lua_len(L, 1);
-		int isnum;
-		int len = (int)lua_tointegerx(L, -1, &isnum);
-		lua_pop(L, 1);
-		if(!isnum || len < 0)
-		{
-			return lua::argerror(L, 1, "invalid length");
-		}
-		if(len == 0)
-		{
-			return lua::argerror(L, 1, "cannot obtain tag of table (zero length)");
-		}
-		tagname = nullptr;
-		for(int j = 1; j <= len; j++)
-		{
-			const char *elemtagname;
-			lua_pushinteger(L, j);
-			switch(lua_gettable(L, 1))
-			{
-				case LUA_TNUMBER:
-					elemtagname = lua_isinteger(L, -1) ? "" : "Float";
-					break;
-				case LUA_TBOOLEAN:
-					elemtagname = "bool";
-					break;
-				default:
-					if(!getudatatag(L, 1, tagname))
-					{
-						return lua::argerror(L, 1, "table index %d: cannot obtain tag of %s", j, luaL_typename(L, -1));
-					}
-					break;
-			}
-			if(tagname == nullptr)
-			{
-				tagname = elemtagname;
-			}else if(std::strcmp(tagname, elemtagname) != 0)
-			{
-				return lua::argerror(L, 1, "table index %d: tag of %s is not %s", j, luaL_typename(L, -1), tagname);
-			}
-			lua_pop(L, 1);
-		}
-	}else if(!getudatatag(L, 1, tagname))
-	{
-		return lua::argerror(L, 1, "cannot obtain tag of %s", luaL_typename(L, 1));
-	}
+	int num = lua_gettop(L);
 
-	if(!tagname[0])
+	for(int i = 1; i <= num; i++)
 	{
-		lua_pushlightuserdata(L, reinterpret_cast<void*>(0x80000000));
-		return 1;
+		const char *tagname;
+		if(lua::isstring(L, i))
+		{
+			tagname = lua_tostring(L, i);
+		}else if(lua_isinteger(L, i))
+		{
+			tagname = "";
+		}else if(lua_isboolean(L, i))
+		{
+			tagname = "bool";
+		}else if(lua::isnumber(L, i))
+		{
+			tagname = "Float";
+		}else if(lua_istable(L, i))
+		{
+			lua_len(L, i);
+			int isnum;
+			int len = (int)lua_tointegerx(L, -1, &isnum);
+			lua_pop(L, 1);
+			if(!isnum || len < 0)
+			{
+				return lua::argerror(L, i, "invalid length");
+			}
+			if(len == 0)
+			{
+				return lua::argerror(L, i, "cannot obtain tag of table (zero length)");
+			}
+			tagname = nullptr;
+			for(int j = 1; j <= len; j++)
+			{
+				const char *elemtagname;
+				lua_pushinteger(L, j);
+				switch(lua_gettable(L, i))
+				{
+					case LUA_TNUMBER:
+						elemtagname = lua_isinteger(L, -1) ? "" : "Float";
+						break;
+					case LUA_TBOOLEAN:
+						elemtagname = "bool";
+						break;
+					default:
+						if(!getudatatag(L, -1, tagname))
+						{
+							return lua::argerror(L, i, "table index %d: cannot obtain tag of %s", j, luaL_typename(L, -1));
+						}
+						break;
+				}
+				if(tagname == nullptr)
+				{
+					tagname = elemtagname;
+				}else if(std::strcmp(tagname, elemtagname) != 0)
+				{
+					return lua::argerror(L, i, "table index %d: tag of %s is not %s", j, luaL_typename(L, -1), tagname);
+				}
+				lua_pop(L, 1);
+			}
+		}else if(!getudatatag(L, i, tagname))
+		{
+			return lua::argerror(L, i, "cannot obtain tag of %s", luaL_typename(L, i));
+		}
+
+		if(!tagname[0])
+		{
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(0x80000000));
+			lua_replace(L, i);
+			continue;
+		}
+		size_t maxlen = (size_t)lua_tointeger(L, lua_upvalueindex(2));
+		if(std::strlen(tagname) > maxlen)
+		{
+			return lua::argerror(L, i, "tag name exceeds %d characters", maxlen);
+		}
+		if(lua_getfield(L, lua_upvalueindex(1), tagname) == LUA_TLIGHTUSERDATA)
+		{
+			lua_replace(L, i);
+			continue;
+		}
+		lua_pop(L, 1);
+		lua_pushstring(L, tagname);
+		lua_pushvalue(L, -1);
+		int index = luaL_ref(L, lua_upvalueindex(1));
+		index |= 0x80000000;
+		if(tagname[0] >= 'A' && tagname[0] <= 'Z')
+		{
+			index |= 0x40000000;
+		}
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(index));
+		lua_settable(L, lua_upvalueindex(1));
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(index));
+		lua_replace(L, i);
 	}
-	size_t maxlen = (size_t)lua_tointeger(L, lua_upvalueindex(2));
-	if(std::strlen(tagname) > maxlen)
-	{
-		return lua::argerror(L, 1, "tag name exceeds %d characters", maxlen);
-	}
-	if(lua_getfield(L, lua_upvalueindex(1), tagname) == LUA_TLIGHTUSERDATA)
-	{
-		return 1;
-	}
-	lua_pop(L, 1);
-	lua_pushstring(L, tagname);
-	lua_pushvalue(L, -1);
-	int index = luaL_ref(L, lua_upvalueindex(1));
-	index |= 0x80000000;
-	if(tagname[0] >= 'A' && tagname[0] <= 'Z')
-	{
-		index |= 0x40000000;
-	}
-	lua_pushlightuserdata(L, reinterpret_cast<void*>(index));
-	lua_settable(L, lua_upvalueindex(1));
-	lua_pushlightuserdata(L, reinterpret_cast<void*>(index));
-	return 1;
+	return num;
 }
 
 void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<cell, std::string> &init)
