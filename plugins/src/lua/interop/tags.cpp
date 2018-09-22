@@ -60,6 +60,49 @@ int tagof(lua_State *L)
 	}else if(lua::isnumber(L, 1))
 	{
 		tagname = "Float";
+	}else if(lua_istable(L, 1))
+	{
+		lua_len(L, 1);
+		int isnum;
+		int len = (int)lua_tointegerx(L, -1, &isnum);
+		lua_pop(L, 1);
+		if(!isnum || len < 0)
+		{
+			return lua::argerror(L, 1, "invalid length");
+		}
+		if(len == 0)
+		{
+			return lua::argerror(L, 1, "cannot obtain tag of table (zero length)");
+		}
+		tagname = nullptr;
+		for(int j = 1; j <= len; j++)
+		{
+			const char *elemtagname;
+			lua_pushinteger(L, j);
+			switch(lua_gettable(L, 1))
+			{
+				case LUA_TNUMBER:
+					elemtagname = lua_isinteger(L, -1) ? "" : "Float";
+					break;
+				case LUA_TBOOLEAN:
+					elemtagname = "bool";
+					break;
+				default:
+					if(!getudatatag(L, 1, tagname))
+					{
+						return lua::argerror(L, 1, "table index %d: cannot obtain tag of %s", j, luaL_typename(L, -1));
+					}
+					break;
+			}
+			if(tagname == nullptr)
+			{
+				tagname = elemtagname;
+			}else if(std::strcmp(tagname, elemtagname) != 0)
+			{
+				return lua::argerror(L, 1, "table index %d: tag of %s is not %s", j, luaL_typename(L, -1), tagname);
+			}
+			lua_pop(L, 1);
+		}
 	}else if(!getudatatag(L, 1, tagname))
 	{
 		return lua::argerror(L, 1, "cannot obtain tag of %s", luaL_typename(L, 1));

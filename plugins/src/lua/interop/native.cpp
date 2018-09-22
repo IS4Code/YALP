@@ -64,6 +64,8 @@ int __call(lua_State *L)
 			auto hdr = (AMX_HEADER*)amx->base;
 			auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
+			std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>> restorers;
+
 			int paramcount = 0;
 			size_t len;
 			bool isconst;
@@ -135,6 +137,64 @@ int __call(lua_State *L)
 				}else if(lua_islightuserdata(L, i))
 				{
 					value = reinterpret_cast<cell>(lua_touserdata(L, i));
+				}else if(lua_istable(L, i))
+				{
+					lua_len(L, i);
+					int isnum;
+					auto len = lua_tointegerx(L, -1, &isnum);
+					lua_pop(L, 1);
+					if(!isnum || len < 0)
+					{
+						return lua::argerror(L, i, "invalid table length");
+					}
+					
+					size_t clen = (size_t)(len + 1) * sizeof(cell);
+					if(!amx::MemCheck(amx, clen))
+					{
+						return lua::amx_error(L, AMX_ERR_MEMORY);
+					}
+					auto addr = reinterpret_cast<cell*>(data + amx->hea);
+					auto &pair = restorers[i];
+					pair.first = addr;
+					auto &rvector = pair.second;
+					for(int j = 1; j <= len; j++)
+					{
+						lua_pushinteger(L, j);
+						switch(lua_gettable(L, i))
+						{
+							case LUA_TNUMBER:
+								if(lua_isinteger(L, -1))
+								{
+									auto num = lua_tointeger(L, -1);
+									if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+									{
+										return lua::argerror(L, i, "table index %d: %I cannot be stored in a single cell", j, num);
+									}
+									value = (cell)num;
+									rvector.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
+								}else{
+									float num = (float)lua_tonumber(L, i);
+									value = amx_ftoc(num);
+									rvector.push_back([](lua_State *L, cell value) { lua_pushnumber(L, amx_ctof(value)); });
+								}
+								break;
+							case LUA_TBOOLEAN:
+								value = lua_toboolean(L, -1);
+								rvector.push_back([](lua_State *L, cell value) { lua_pushboolean(L, value); });
+								break;
+							case LUA_TLIGHTUSERDATA:
+								value = reinterpret_cast<cell>(lua_touserdata(L, -1));
+								rvector.push_back([](lua_State *L, cell value) { lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
+								break;
+							default:
+								return lua::argerror(L, i, "table index %d: cannot marshal %s", j, luaL_typename(L, -1));
+						}
+						lua_pop(L, 1);
+						*(addr++) = value;
+					}
+					*(addr++) = 0;
+					value = amx->hea;
+					amx->hea += clen;
 				}else{
 					if(lua_isnil(L, i) && paramcount == 0)
 					{
@@ -157,6 +217,18 @@ int __call(lua_State *L)
 			{
 				lua::jumpguard guard(L);
 				result = native(amx, params);
+			}
+
+			for(auto &pair : restorers)
+			{
+				int i = pair.first;
+				cell *addr = pair.second.first;
+				for(size_t j = 0; j < pair.second.second.size(); j++)
+				{
+					lua_pushinteger(L, j + 1);
+					pair.second.second[j](L, *(addr++));
+					lua_settable(L, i);
+				}
 			}
 
 			errorcode = amx->error;
