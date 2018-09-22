@@ -94,6 +94,7 @@ bool lua::interop::amx_find_pubvar(AMX *amx, const char *varname, cell *amx_addr
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					error = AMX_ERR_MEMORY;
@@ -185,6 +186,7 @@ bool lua::interop::amx_get_pubvar(AMX *amx, int index, char *varname, cell *amx_
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;
@@ -231,6 +233,7 @@ bool lua::interop::amx_num_pubvars(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;

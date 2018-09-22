@@ -126,6 +126,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int indexable = lua_absindex(L2, -1);
 
 			lua_pushvalue(L, 2);
@@ -149,6 +150,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int indexable = lua_absindex(L2, -1);
 
 			lua_pushvalue(L, 2);
@@ -176,6 +178,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int callable = lua_absindex(L2, -1);
 			int top = lua_gettop(L2) - 1;
 
@@ -224,6 +227,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int obj = lua_absindex(L2, -1);
 
 			int err = lua::plen(L2, obj);
@@ -246,6 +250,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{
@@ -306,6 +311,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{
@@ -349,6 +355,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
+			lua::stackguard guard(L2);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{

@@ -196,6 +196,7 @@ bool lua::interop::amx_find_tag_id(AMX *amx, cell tag_id, char *tagname)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;
@@ -231,6 +232,7 @@ bool lua::interop::amx_get_tag(AMX *amx, int index, char *tagname, cell *tag_id)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;
@@ -270,6 +272,7 @@ bool lua::interop::amx_num_tags(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;

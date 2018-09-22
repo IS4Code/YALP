@@ -119,6 +119,7 @@ int settimer(lua_State *L)
 	{
 		if(auto lock = handle.lock())
 		{
+			lua::stackguard guard(L);
 			lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
 			luaL_unref(L, LUA_REGISTRYINDEX, ref);
 			int err = lua_pcall(L, 0, 0, 0);

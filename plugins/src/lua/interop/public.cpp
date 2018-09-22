@@ -97,6 +97,7 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					error = AMX_ERR_MEMORY;
@@ -175,6 +176,7 @@ bool lua::interop::amx_get_public(AMX *amx, int index, char *funcname)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 4))
 				{
 					return false;
@@ -210,6 +212,7 @@ bool lua::interop::amx_num_publics(AMX *amx, int *number)
 			if(auto info = it->second.lock())
 			{
 				auto L = info->L;
+				lua::stackguard guard(L);
 				if(!lua_checkstack(L, 1))
 				{
 					return false;
@@ -234,6 +237,7 @@ bool lua::interop::amx_exec(AMX *amx, cell *retval, int index, int &result)
 		if(auto info = it->second.lock())
 		{
 			auto L = info->L;
+			lua::stackguard guard(L);
 			if(!lua_checkstack(L, amx->paramcount + 5))
 			{
 				result = amx->error = AMX_ERR_MEMORY;

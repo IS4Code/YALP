@@ -189,12 +189,23 @@ namespace lua
 		lua_State *L;
 		void *jmp;
 		void *gljmp;
+
 	public:
 		jumpguard(lua_State *L);
 		~jumpguard();
 	};
 
 	int error(lua_State *L);
+
+	class stackguard
+	{
+		lua_State *L;
+		int top;
+
+	public:
+		stackguard(lua_State *L);
+		~stackguard();
+	};
 }
 
 #endif
