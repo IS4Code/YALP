@@ -157,7 +157,7 @@ void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<ce
 	lua_createtable(L, init.size(), 0);
 	for(const auto &pair : init)
 	{
-		int index = (pair.first & 0x3FFFFFFF) - 1;
+		int index = pair.first & 0x3FFFFFFF;
 		lua_pushlstring(L, pair.second.c_str(), pair.second.size());
 		lua_pushvalue(L, -1);
 		lua_rawseti(L, -3, index);
