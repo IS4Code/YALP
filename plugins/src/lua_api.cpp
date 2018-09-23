@@ -565,6 +565,9 @@ int lua::bind(AMX *amx, cell *retval, int index)
 	amx->reset_hea = amx->hea = amx->hlw = 0;
 	amx->cip = 0;
 
+	auto hdr = (AMX_HEADER*)amx->base;
+	hdr->hea = hdr->dat;
+
 	auto ptr = std::make_shared<AMX*>(amx);
 	init_map[L] = ptr;
 	lua::pushuserdata(L, std::move(ptr));
