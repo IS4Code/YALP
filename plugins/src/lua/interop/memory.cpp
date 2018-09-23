@@ -285,6 +285,7 @@ int heapalloc(lua_State *L)
 	{
 		return luaL_argerror(L, 1, "out of range");
 	}
+	bool zero = luaL_opt(L, lua::checkboolean, 2, true);
 
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	if(!amx::MemCheck(amx, (size_t)size))
@@ -295,7 +296,10 @@ int heapalloc(lua_State *L)
 	amx->hea += (size_t)size;
 	auto hdr = (AMX_HEADER*)amx->base;
 	auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
-	std::memset(data + offset, 0, (size_t)size);
+	if(zero)
+	{
+		std::memset(data + offset, 0, (size_t)size);
+	}
 
 	if(lua::numresults(L) == 0) return 0;
 
