@@ -354,6 +354,38 @@ static int optcheck(lua_State *L)
 	return lua_error(L);
 }
 
+static int map_cont(lua_State *L, int status, lua_KContext ctx)
+{
+	int numret = lua_gettop(L) - (ctx & 0xFF);
+	int next = (ctx & ~0xFF) >> 8;
+	while(next <= lua_gettop(L))
+	{
+		if(next == 1)
+		{
+			next = 2;
+		}else{
+			lua_rotate(L, next, numret);
+			next += numret;
+		}
+		if(next > lua_gettop(L) || (lua::numresults(L) != LUA_MULTRET && lua::numresults(L) <= next - 2))
+		{
+			break;
+		}
+		lua_pushvalue(L, 1);
+		lua_rotate(L, next, -1);
+		int top = lua_gettop(L) - 2;
+		lua_callk(L, 1, LUA_MULTRET, (next << 8) | top, map_cont);
+		numret = lua_gettop(L) - top;
+	}
+	return lua_gettop(L) - 1;
+}
+
+static int map(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	return map_cont(L, LUA_OK, 1 << 8);
+}
+
 static int debug_numresults(lua_State *L)
 {
 	int level = (int)luaL_optinteger(L, 1, 1);
@@ -405,6 +437,9 @@ static int open_base(lua_State *L)
 
 	lua_pushcfunction(L, optcheck);
 	lua_setfield(L, -2, "optcheck");
+
+	lua_pushcfunction(L, map);
+	lua_setfield(L, -2, "map");
 
 	open_package(L);
 	lua_pop(L, 1);

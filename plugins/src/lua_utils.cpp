@@ -225,6 +225,22 @@ int lua::pcallk(lua_State *L, int nargs, int nresults, int errfunc, lua::KFuncti
 	return kc(L, lua_pcallk(L, nargs, nresults, errfunc, kpos, kc), kpos);
 }
 
+void lua::callk(lua_State *L, int nargs, int nresults, lua::KFunction &&k)
+{
+	int kpos = lua_absindex(L, -nargs - 1);
+	lua::pushuserdata(L, std::move(k));
+	lua_insert(L, kpos);
+
+	lua_KFunction kc = [](lua_State *L, int status, lua_KContext kpos)
+	{
+		lua::KFunction k = std::move(lua::touserdata<lua::KFunction>(L, kpos));
+		lua_remove(L, kpos);
+		return k(L, status);
+	};
+	lua_callk(L, nargs, nresults, kpos, kc);
+	kc(L, LUA_OK, kpos);
+}
+
 bool lua::isnumber(lua_State *L, int idx)
 {
 	return lua_type(L, idx) == LUA_TNUMBER;

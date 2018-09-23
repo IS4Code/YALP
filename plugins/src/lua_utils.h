@@ -153,6 +153,8 @@ namespace lua
 
 	int pcallk(lua_State *L, int nargs, int nresults, int errfunc, KFunction &&k);
 
+	void callk(lua_State *L, int nargs, int nresults, KFunction &&k);
+
 	bool isnumber(lua_State *L, int idx);
 
 	bool isstring(lua_State *L, int idx);
