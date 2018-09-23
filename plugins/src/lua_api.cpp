@@ -389,7 +389,8 @@ static int map(lua_State *L)
 static int debug_numresults(lua_State *L)
 {
 	int level = (int)luaL_optinteger(L, 1, 1);
-	lua_pushinteger(L, lua::numresults(L, level));
+	int num = lua::numresults(L, level);
+	lua_pushinteger(L, num == LUA_MULTRET ? -1 : num);
 	return 1;
 }
 

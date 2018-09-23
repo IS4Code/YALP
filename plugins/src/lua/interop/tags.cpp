@@ -30,7 +30,7 @@ struct amx_tag_info
 	}
 };
 
-bool getudatatag(lua_State *L, int idx, const char *&tagname)
+static bool getudatatag(lua_State *L, int idx, const char *&tagname)
 {
 	if(lua_getmetatable(L, idx))
 	{
@@ -45,7 +45,7 @@ bool getudatatag(lua_State *L, int idx, const char *&tagname)
 	return false;
 }
 
-int tagof(lua_State *L)
+static int tagof(lua_State *L)
 {
 	int num = lua_gettop(L);
 
@@ -145,6 +145,39 @@ int tagof(lua_State *L)
 	return num;
 }
 
+static int tagname(lua_State *L)
+{
+	int num = lua_gettop(L);
+
+	for(int i = 1; i <= num; i++)
+	{
+		cell tag_id = reinterpret_cast<cell>(lua::checklightudata(L, i));
+		if(tag_id == 0x80000000 || tag_id == 0)
+		{
+			lua_pushlstring(L, "", 0);
+			lua_replace(L, i);
+			continue;
+		}
+		if(tag_id & 0x80000000)
+		{
+			int index = tag_id & 0x3FFFFFFF;
+			if(lua_rawgeti(L, lua_upvalueindex(1), index) == LUA_TSTRING)
+			{
+				auto str = lua_tostring(L, -1);
+				if((str[0] >= 'A' && str[0] <= 'Z') == ((tag_id & 0x40000000) != 0))
+				{
+					lua_replace(L, i);
+					continue;
+				}
+			}
+			lua_pop(L, 1);
+		}
+		lua_pushnil(L);
+		lua_replace(L, i);
+	}
+	return num;
+}
+
 void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<cell, std::string> &init)
 {
 	int table = lua_absindex(L, -1);
@@ -171,6 +204,12 @@ void lua::interop::init_tags(lua_State *L, AMX *amx, const std::unordered_map<ce
 	lua_pushinteger(L, maxlen);
 	lua_pushcclosure(L, tagof, 2);
 	lua_setfield(L, table, "tagof");
+
+	lua_pushvalue(L, -1);
+	lua_pushcclosure(L, tagname, 1);
+	lua_setfield(L, table, "tagname");
+
+
 	info->taglist = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	info->self = luaL_ref(L, LUA_REGISTRYINDEX);
