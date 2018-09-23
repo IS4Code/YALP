@@ -365,7 +365,7 @@ int toheap(lua_State *L)
 	return args;
 }
 
-int varargs(lua_State *L)
+int _struct(lua_State *L)
 {
 	int args = lua_gettop(L);
 	auto numr = lua::numresults(L);
@@ -660,8 +660,8 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 
 	lua_pushvalue(L, buffer);
 	lua_getfield(L, table, "span");
-	lua_pushcclosure(L, varargs, 2);
-	lua_setfield(L, table, "varargs");
+	lua_pushcclosure(L, _struct, 2);
+	lua_setfield(L, table, "struct");
 
 	lua_pushlightuserdata(L, amx);
 	lua_pushcclosure(L, heapargs, 1);
