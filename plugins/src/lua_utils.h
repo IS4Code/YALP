@@ -127,7 +127,9 @@ namespace lua
 
 	int load(lua_State *L, const lua::Reader &reader, const char *chunkname, const char *mode);
 
-	void pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn);
+	typedef std::function<int(lua_State *L)> CFunction;
+
+	void pushcfunction(lua_State *L, CFunction &&fn);
 
 	int pgetfield(lua_State *L, int idx, const char *k);
 
@@ -185,6 +187,8 @@ namespace lua
 	void cleanup(lua_State *L);
 
 	bool active(lua_State *L);
+
+	int tailyield(lua_State *L, int n);
 
 	class jumpguard
 	{

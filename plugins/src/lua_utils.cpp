@@ -122,13 +122,13 @@ int lua::load(lua_State *L, const lua::Reader &reader, const char *chunkname, co
 	}, const_cast<lua::Reader*>(&reader), chunkname, mode);
 }
 
-void lua::pushcfunction(lua_State *L, const std::function<int(lua_State *L)> &fn)
+void lua::pushcfunction(lua_State *L, lua::CFunction &&fn)
 {
-	lua_pushlightuserdata(L, const_cast<std::function<int(lua_State *L)>*>(&fn));
+	lua::pushuserdata(L, std::move(fn));
 	lua_pushcclosure(L, [](lua_State *L)
 	{
-		auto f = lua_touserdata(L, lua_upvalueindex(1));
-		return (*reinterpret_cast<const std::function<int(lua_State *L)>*>(f))(L);
+		auto &f = lua::touserdata<lua::CFunction>(L, lua_upvalueindex(1));
+		return f(L);
 	}, 1);
 }
 
@@ -390,4 +390,14 @@ lua::stackguard::stackguard(lua_State *L) : L(L), top(lua_gettop(L))
 lua::stackguard::~stackguard()
 {
 	assert(top == lua_gettop(L));
+}
+
+int lua::tailyield(lua_State *L, int n)
+{
+	int top = lua_gettop(L) - n;
+	lua_yieldk(L, n, top, [](lua_State *L, int status, lua_KContext top)
+	{
+		return lua_gettop(L) - top;
+	});
+	return lua_gettop(L) - top;
 }

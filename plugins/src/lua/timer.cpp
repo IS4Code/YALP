@@ -7,12 +7,13 @@
 #include <list>
 #include <functional>
 #include <memory>
+#include <thread>
 
 typedef std::function<void()> handler_t;
 
 static int tick_count = 0;
-std::list<std::pair<int, handler_t>> tick_handlers;
-std::list<std::pair<std::chrono::system_clock::time_point, handler_t>> timer_handlers;
+static std::list<std::pair<int, handler_t>> tick_handlers;
+static std::list<std::pair<std::chrono::steady_clock::time_point, handler_t>> timer_handlers;
 
 template <class Ord, class Obj>
 typename std::list<std::pair<Ord, Obj>>::iterator insert_sorted(std::list<std::pair<Ord, Obj>> &list, const Ord &ord, Obj &&obj)
@@ -26,15 +27,15 @@ typename std::list<std::pair<Ord, Obj>>::iterator insert_sorted(std::list<std::p
 	}
 }
 
-void register_tick(int ticks, handler_t &&handler)
+static void register_tick(int ticks, handler_t &&handler)
 {
 	int time = tick_count + ticks;
 	insert_sorted(tick_handlers, time, std::move(handler));
 }
 
-void register_timer(int interval, handler_t &&handler)
+static void register_timer(int interval, handler_t &&handler)
 {
-	auto time = std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::milliseconds(interval));
+	auto time = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(interval));
 	insert_sorted(timer_handlers, time, std::move(handler));
 }
 
@@ -62,7 +63,7 @@ void lua::timer::tick()
 		tick_count = 0;
 	}
 
-	auto now = std::chrono::system_clock::now();
+	auto now = std::chrono::steady_clock::now();
 	{
 		auto it = timer_handlers.begin();
 		while(it != timer_handlers.end())
@@ -88,7 +89,7 @@ void lua::timer::close()
 }
 
 template <void (*Register)(int interval, handler_t &&handler)>
-int settimer(lua_State *L)
+static int settimer(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	auto interval = luaL_checkinteger(L, 2);
@@ -157,9 +158,11 @@ bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 	return false;
 }
 
-int parallelreg(lua_State *L)
+static int parallelreg(lua_State *L)
 {
 	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed inside 'async'");
+	if(lua_gethook(L)) return luaL_error(L, "the thread must not have any hooks");
+
 	int count = 100000;
 	if(lua_isinteger(L, 1))
 	{
@@ -223,7 +226,7 @@ int parallelreg(lua_State *L)
 	return cont(L, lua_pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, 0, cont), 0);
 }
 
-int parallel(lua_State *L)
+static int parallel(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_insert(L, 1);
@@ -235,6 +238,33 @@ int parallel(lua_State *L)
 		lua_insert(L, 3);
 	}
 	return lua::tailcall(L, lua_gettop(L) - 1);
+}
+
+static int sleep(lua_State *L)
+{
+	auto interval = luaL_checkinteger(L, 1);
+	auto duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(interval));
+	
+	auto end = std::chrono::steady_clock::now() + duration;
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua::pushcfunction(L, [=](lua_State *L)
+	{
+		if(std::chrono::steady_clock::now() >= end)
+		{
+			lua_pushboolean(L, true);
+			return 1;
+		}
+		std::this_thread::yield();
+		return 0;
+	});
+	return lua::tailcall(L, 1);
+}
+
+static int wait(lua_State *L)
+{
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_insert(L, 1);
+	return lua::tailyield(L, lua_gettop(L));
 }
 
 int lua::timer::loader(lua_State *L)
@@ -266,6 +296,18 @@ int lua::timer::loader(lua_State *L)
 	}, 1);
 	lua_pushcclosure(L, parallel, 2);
 	lua_setfield(L, table, "parallel");
+
+	luaL_loadstring(L, "local f=...;while not f() do end"); // implemented in Lua to be interruptible
+	lua_pushcclosure(L, sleep, 1);
+	lua_setfield(L, table, "sleep");
+
+	lua_getfield(L, table, "ms");
+	lua_pushcclosure(L, wait, 1);
+	lua_setfield(L, table, "wait");
+
+	lua_getfield(L, table, "tick");
+	lua_pushcclosure(L, wait, 1);
+	lua_setfield(L, table, "waitticks");
 
 	return 1;
 }
