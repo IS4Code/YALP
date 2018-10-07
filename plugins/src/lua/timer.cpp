@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <mutex>
 
 typedef std::function<void()> handler_t;
 
@@ -121,6 +122,7 @@ static int settimer(lua_State *L)
 		if(auto lock = handle.lock())
 		{
 			lua::stackguard guard(L);
+			luaL_checkstack(L, 2, nullptr);
 			lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
 			luaL_unref(L, LUA_REGISTRYINDEX, ref);
 			int err = lua_pcall(L, 0, 0, 0);
@@ -158,28 +160,19 @@ bool lua::timer::pushyielded(lua_State *L, lua_State *from)
 	return false;
 }
 
-static int parallelreg(lua_State *L)
+static int parallelex(lua_State *L)
 {
 	if(!lua_isyieldable(L)) return luaL_error(L, "must be executed inside 'async'");
 	if(lua_gethook(L)) return luaL_error(L, "the thread must not have any hooks");
 
-	int count = 100000;
-	if(lua_isinteger(L, 1))
+	int count = static_cast<int>(luaL_checkinteger(L, 1));
+	if(count <= 0)
 	{
-		luaL_checktype(L, 2, LUA_TFUNCTION);
-		luaL_checktype(L, 3, LUA_TFUNCTION);
-		count = (int)lua_tointeger(L, 1);
-		if(count <= 0)
-		{
-			return luaL_argerror(L, 1, "out of range");
-		}
-		lua_remove(L, 1);
-	}else if(!lua_isfunction(L, 1))
-	{
-		return lua::argerrortype(L, 1, "function or integer");
-	}else{
-		luaL_checktype(L, 2, LUA_TFUNCTION);
+		return luaL_argerror(L, 1, "out of range");
 	}
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	luaL_checktype(L, 3, LUA_TFUNCTION);
+	lua_remove(L, 1);
 
 	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) != LUA_TTABLE)
 	{
@@ -193,10 +186,10 @@ static int parallelreg(lua_State *L)
 		lua_setmetatable(L, -2);
 	}
 	lua_pushthread(L);
-	lua_pushvalue(L, 2);
+	lua_pushvalue(L, 1);
 	lua_rawset(L, -3);
 	lua_pop(L, 1);
-	lua_remove(L, 2);
+	lua_remove(L, 1);
 
 	lua_Hook hook = [](lua_State *L, lua_Debug *ar)
 	{
@@ -230,13 +223,13 @@ static int parallel(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_insert(L, 1);
-	lua_pushvalue(L, lua_upvalueindex(2));
-	if(lua_isinteger(L, 2))
+	if(!lua_isinteger(L, 2))
 	{
-		lua_insert(L, 4);
-	}else{
-		lua_insert(L, 3);
+		lua_pushinteger(L, 100000);
+		lua_insert(L, 2);
 	}
+	lua_pushvalue(L, lua_upvalueindex(2));
+	lua_insert(L, 3);
 	return lua::tailcall(L, lua_gettop(L) - 1);
 }
 
@@ -267,6 +260,64 @@ static int wait(lua_State *L)
 	return lua::tailyield(L, lua_gettop(L));
 }
 
+static void timeout_hook(lua_State *L, lua_Debug *ar)
+{
+	lua_getinfo(L, "Sl", ar);
+	if(ar->currentline > 0)
+	{
+		lua_pushfstring(L, "%s:%d: ", ar->short_src, ar->currentline);
+	}else{
+		lua_pushfstring(L, "");
+	}
+	lua_pushstring(L, "function was terminated after timeout");
+	lua_concat(L, 2);
+	lua_error(L);
+}
+
+static int timeout(lua_State *L)
+{
+	auto duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(luaL_checkinteger(L, 1)));
+	lua_remove(L, 1);
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	struct signal
+	{
+		bool ended = false;
+		std::mutex hook_mutex;
+	};
+
+	auto info = std::make_shared<signal>();
+
+	std::thread([=]()
+	{
+		std::this_thread::sleep_for(duration);
+		
+		std::lock_guard<std::mutex> lock(info->hook_mutex);
+		if(!info->ended)
+		{
+			lua_sethook(L, timeout_hook, LUA_MASKCOUNT, 1);
+		}
+	}).detach();
+
+	return lua::pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, [=](lua_State *L, int status)
+	{
+		std::lock_guard<std::mutex> lock(info->hook_mutex);
+		info->ended = true;
+		if(lua_gethook(L) == timeout_hook)
+		{
+			lua_sethook(L, nullptr, 0, 0);
+		}
+		switch(status)
+		{
+			case LUA_OK:
+			case LUA_YIELD:
+				return lua_gettop(L);
+			default:
+				return lua_error(L);
+		}
+	});
+}
+
 int lua::timer::loader(lua_State *L)
 {
 	lua_createtable(L, 0, 2);
@@ -281,10 +332,10 @@ int lua::timer::loader(lua_State *L)
 	lua_setfield(L, table, "tick");
 	luaL_ref(L, LUA_REGISTRYINDEX);
 
-	lua_pushcfunction(L, parallelreg);
-	lua_setfield(L, table, "parallelreg");
+	lua_pushcfunction(L, parallelex);
+	lua_setfield(L, table, "parallelex");
 
-	lua_getfield(L, table, "parallelreg");
+	lua_getfield(L, table, "parallelex");
 	lua_getfield(L, table, "tick");
 	lua_pushcclosure(L, [](lua_State *L)
 	{
@@ -308,6 +359,9 @@ int lua::timer::loader(lua_State *L)
 	lua_getfield(L, table, "tick");
 	lua_pushcclosure(L, wait, 1);
 	lua_setfield(L, table, "waitticks");
+
+	lua_pushcfunction(L, timeout);
+	lua_setfield(L, table, "timeout");
 
 	return 1;
 }

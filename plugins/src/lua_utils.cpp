@@ -225,7 +225,7 @@ int lua::pcallk(lua_State *L, int nargs, int nresults, int errfunc, lua::KFuncti
 	return kc(L, lua_pcallk(L, nargs, nresults, errfunc, kpos, kc), kpos);
 }
 
-void lua::callk(lua_State *L, int nargs, int nresults, lua::KFunction &&k)
+int lua::callk(lua_State *L, int nargs, int nresults, lua::KFunction &&k)
 {
 	int kpos = lua_absindex(L, -nargs - 1);
 	lua::pushuserdata(L, std::move(k));
@@ -238,7 +238,7 @@ void lua::callk(lua_State *L, int nargs, int nresults, lua::KFunction &&k)
 		return k(L, status);
 	};
 	lua_callk(L, nargs, nresults, kpos, kc);
-	kc(L, LUA_OK, kpos);
+	return kc(L, LUA_OK, kpos);
 }
 
 bool lua::isnumber(lua_State *L, int idx)

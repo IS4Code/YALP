@@ -145,6 +145,7 @@ bool lua::interop::amx_find_public(AMX *amx, const char *funcname, int *index, i
 					}else if(lerror != LUA_OK)
 					{
 						error = AMX_ERR_GENERAL;
+						lua_pop(L, 1);
 						return true;
 					}
 					if(indexed)
