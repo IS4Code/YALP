@@ -278,7 +278,11 @@ static int timeout(lua_State *L)
 {
 	auto duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(luaL_checkinteger(L, 1)));
 	lua_remove(L, 1);
-	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	if(!lua_isfunction(L, 1) && !lua_isthread(L, 1))
+	{
+		return lua::argerrortype(L, 1, "function or thread");
+	}
 
 	struct signal
 	{
@@ -288,6 +292,14 @@ static int timeout(lua_State *L)
 
 	auto info = std::make_shared<signal>();
 
+	lua_State *lthread;
+	if(lua_isthread(L, 1))
+	{
+		lthread = lua_tothread(L, 1);
+	}else{
+		lthread = L;
+	}
+
 	std::thread([=]()
 	{
 		std::this_thread::sleep_for(duration);
@@ -295,27 +307,56 @@ static int timeout(lua_State *L)
 		std::lock_guard<std::mutex> lock(info->hook_mutex);
 		if(!info->ended)
 		{
-			lua_sethook(L, timeout_hook, LUA_MASKCOUNT, 1);
+			lua_sethook(lthread, timeout_hook, LUA_MASKCOUNT, 1);
 		}
 	}).detach();
 
-	return lua::pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, [=](lua_State *L, int status)
+	if(lua_isthread(L, 1))
 	{
+		int nargs = lua_gettop(L) - 1;
+		if(!lua_checkstack(lthread, nargs))
+		{
+			return luaL_error(L, "stack overflow");
+		}
+		lua_xmove(L, lthread, nargs);
+		int status = lua_resume(lthread, L, nargs);
 		std::lock_guard<std::mutex> lock(info->hook_mutex);
 		info->ended = true;
-		if(lua_gethook(L) == timeout_hook)
+		if(lua_gethook(lthread) == timeout_hook)
 		{
-			lua_sethook(L, nullptr, 0, 0);
+			lua_sethook(lthread, nullptr, 0, 0);
 		}
 		switch(status)
 		{
 			case LUA_OK:
 			case LUA_YIELD:
-				return lua_gettop(L);
+				nargs = lua_gettop(lthread);
+				luaL_checkstack(L, nargs, nullptr);
+				lua_xmove(lthread, L, nargs);
+				return lua_gettop(L) - 1;
 			default:
+				lua_xmove(lthread, L, 1);
 				return lua_error(L);
 		}
-	});
+	}else{
+		return lua::pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, [=](lua_State *L, int status)
+		{
+			std::lock_guard<std::mutex> lock(info->hook_mutex);
+			info->ended = true;
+			if(lua_gethook(L) == timeout_hook)
+			{
+				lua_sethook(L, nullptr, 0, 0);
+			}
+			switch(status)
+			{
+				case LUA_OK:
+				case LUA_YIELD:
+					return lua_gettop(L);
+				default:
+					return lua_error(L);
+			}
+		});
+	}
 }
 
 int lua::timer::loader(lua_State *L)
@@ -348,7 +389,7 @@ int lua::timer::loader(lua_State *L)
 	lua_pushcclosure(L, parallel, 2);
 	lua_setfield(L, table, "parallel");
 
-	luaL_loadstring(L, "local f=...;while not f() do end"); // implemented in Lua to be interruptible
+	lua::loadbufferx(L, "local f=...;while not f() do end", "='sleep'", nullptr);
 	lua_pushcclosure(L, sleep, 1);
 	lua_setfield(L, table, "sleep");
 
