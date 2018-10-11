@@ -29,8 +29,15 @@ static int custom_print(lua_State *L)
 static int take(lua_State *L)
 {
 	int numrets = (int)luaL_checkinteger(L, 1);
-	int numargs = lua_gettop(L) - 2;
-	return lua::tailcall(L, numargs, numrets);
+	if(numrets < -1)
+	{
+		return luaL_argerror(L, 1, "out of range");
+	}
+	if(numrets == -1)
+	{
+		numrets = LUA_MULTRET;
+	}
+	return lua::tailcall(L, lua_gettop(L) - 2, numrets);
 }
 
 static int bind(lua_State *L)
