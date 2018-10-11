@@ -193,7 +193,10 @@ static int parallelex(lua_State *L)
 
 	lua_Hook hook = [](lua_State *L, lua_Debug *ar)
 	{
-		lua_yield(L, 0);
+		if(ar->event == LUA_HOOKCOUNT)
+		{
+			lua_yield(L, 0);
+		}
 	};
 
 	lua_sethook(L, hook, LUA_MASKCOUNT, count);
@@ -262,16 +265,19 @@ static int wait(lua_State *L)
 
 static void timeout_hook(lua_State *L, lua_Debug *ar)
 {
-	lua_getinfo(L, "Sl", ar);
-	if(ar->currentline > 0)
+	if(ar->event == LUA_HOOKCOUNT)
 	{
-		lua_pushfstring(L, "%s:%d: ", ar->short_src, ar->currentline);
-	}else{
-		lua_pushfstring(L, "");
+		lua_getinfo(L, "Sl", ar);
+		if(ar->currentline > 0)
+		{
+			lua_pushfstring(L, "%s:%d: ", ar->short_src, ar->currentline);
+		} else {
+			lua_pushfstring(L, "");
+		}
+		lua_pushstring(L, "function was terminated after timeout");
+		lua_concat(L, 2);
+		lua_error(L);
 	}
-	lua_pushstring(L, "function was terminated after timeout");
-	lua_concat(L, 2);
-	lua_error(L);
 }
 
 static int timeout(lua_State *L)

@@ -446,10 +446,96 @@ static int open_debug(lua_State *L)
 	return 1;
 }
 
+static const char HOOKKEY = 0;
+
+void coroutine_hookfunc(lua_State *L, lua_Debug *ar)
+{
+	luaL_checkstack(L, 2, nullptr);
+	if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TTABLE)
+	{
+		lua_pushthread(L);
+		if(lua_rawget(L, -2) == LUA_TTHREAD)
+		{
+			auto parent = lua_tothread(L, -1);
+			lua_pop(L, 2);
+			if(auto hook = lua_gethook(parent))
+			{
+				if(lua_gethookmask(parent) & (1 << ar->event))
+				{
+					hook(L, ar);
+				}
+			}
+			return;
+		}
+		lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+}
+
+static int coroutine_resumehooked(lua_State *L)
+{
+	lua_pushvalue(L, 1);
+	lua_insert(L, 1);
+	lua_State *thread = lua_tothread(L, 1);
+	lua_pushvalue(L, lua_upvalueindex(1));
+	lua_insert(L, 2);
+	if(thread)
+	{
+		lua_sethook(thread, coroutine_hookfunc, LUA_MASKCALL | LUA_MASKCOUNT | LUA_MASKLINE | LUA_MASKRET, 1);
+
+		if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) != LUA_TTABLE)
+		{
+			lua_pop(L, 1);
+			lua_createtable(L, 0, 2);
+			lua_pushvalue(L, -1);
+			lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
+			lua_pushstring(L, "k");
+			lua_setfield(L, -2, "__mode");
+			lua_pushvalue(L, -1);
+			lua_setmetatable(L, -2);
+		}
+		lua_pushvalue(L, 1);
+		lua_pushthread(L);
+		lua_rawset(L, -3);
+		lua_pop(L, 1);
+	}
+	return lua::pcallk(L, lua_gettop(L) - 2, lua::numresults(L), 0, [=](lua_State *L, int status)
+	{
+		if(lua_gethook(thread) == coroutine_hookfunc)
+		{
+			lua_sethook(thread, nullptr, 0, 0);
+		}
+		if(lua_rawgetp(L, LUA_REGISTRYINDEX, &HOOKKEY) == LUA_TTABLE)
+		{
+			lua_pushvalue(L, 1);
+			lua_pushnil(L);
+			lua_rawset(L, -3);
+		}
+		lua_pop(L, 1);
+		switch(status)
+		{
+			case LUA_OK:
+			case LUA_YIELD:
+				return lua_gettop(L) - 1;
+			default:
+				return lua_error(L);
+		}
+	});
+}
+
+static int open_coroutine(lua_State *L)
+{
+	luaopen_coroutine(L);
+	lua_getfield(L, -1, "resume");
+	lua_pushcclosure(L, coroutine_resumehooked, 1);
+	lua_setfield(L, -2, "resumehooked");
+	return 1;
+}
+
 static std::vector<std::pair<const char*, lua_CFunction>> libs = {
 	{"_G", open_base},
 	{LUA_LOADLIBNAME, open_package},
-	{LUA_COLIBNAME, luaopen_coroutine},
+	{LUA_COLIBNAME, open_coroutine},
 	{LUA_TABLIBNAME, open_table},
 	{LUA_IOLIBNAME, luaopen_io},
 	{LUA_OSLIBNAME, luaopen_os},
