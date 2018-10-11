@@ -12,34 +12,14 @@
 static int custom_print(lua_State *L)
 {
 	int n = lua_gettop(L);
-	bool hastostring = lua_getglobal(L, "tostring") == LUA_TFUNCTION;
-	int tostring = lua_absindex(L, -1);
-	if(!hastostring) lua_pop(L, 1);
 	
 	luaL_Buffer buf;
 	luaL_buffinit(L, &buf);
 	for(int i = 1; i <= n; i++)
 	{
 		if(i > 1) luaL_addlstring(&buf, "\t", 1);
-		if(!hastostring)
-		{
-			if(lua_isstring(L, i))
-			{
-				lua_pushvalue(L, i);
-				luaL_addvalue(&buf);
-			}else{
-				luaL_addstring(&buf, luaL_typename(L, i));
-			}
-		}else{
-			lua_pushvalue(L, tostring);
-			lua_pushvalue(L, i);
-			lua_call(L, 1, 1);
-			if(!lua_isstring(L, -1))
-			{
-				return luaL_error(L, "'tostring' must return a string to 'print'");
-			}
-			luaL_addvalue(&buf);
-		}
+		luaL_tolstring(L, i, nullptr);
+		luaL_addvalue(&buf);
 	}
 	luaL_pushresult(&buf);
 	logprintf("%s", lua_tostring(L, -1));
@@ -516,15 +496,8 @@ void lua::report_error(lua_State *L, int error)
 	bool pop = false;
 	if(!msg)
 	{
-		if(lua_getglobal(L, "tostring") == LUA_TFUNCTION)
-		{
-			lua_pushvalue(L, -2);
-			lua_call(L, 1, 1);
-			msg = lua_tostring(L, -1);
-			pop = true;
-		}else{
-			msg = luaL_typename(L, -1);
-		}
+		msg = luaL_tolstring(L, -1, nullptr);
+		pop = true;
 	}
 	logprintf("unhandled Lua error %d: %s", error, msg);
 	if(pop)

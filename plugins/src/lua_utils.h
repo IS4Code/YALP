@@ -212,6 +212,18 @@ namespace lua
 		stackguard(lua_State *L);
 		~stackguard();
 	};
+
+	template <size_t Size>
+	const char *pushliteral(lua_State *L, const char(&s)[Size])
+	{
+		return lua_pushlstring(L, s, Size - 1);
+	}
+
+	template <size_t Size>
+	int loadbufferx(lua_State *L, const char(&buff)[Size], const char *name, const char *mode)
+	{
+		return luaL_loadbufferx(L, buff, Size - 1, name, mode);
+	}
 }
 
 #endif
