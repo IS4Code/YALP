@@ -118,17 +118,7 @@ int tocellstring(lua_State *L)
 	lua_pushboolean(L, false);
 	lua_call(L, 2, 1);
 	auto ptr = reinterpret_cast<cell*>(lua_touserdata(L, -1));
-	for(size_t i = 0; i < length; i++)
-	{
-		char c = str[i];
-		if(c == '\0')
-		{
-			ptr[i] = 0xFFFF00;
-		}else{
-			ptr[i] = c;
-		}
-	}
-	ptr[length] = 0;
+	amx::SetString(ptr, str, length, false);
 	return 1;
 }
 

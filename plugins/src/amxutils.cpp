@@ -93,7 +93,13 @@ void amx::SetString(cell *dest, const char *source, size_t len, bool pack)
 	{
 		while(len-- > 0)
 		{
-			*dest++ = *source++;
+			unsigned char c = *source++;
+			if(c == '\0')
+			{
+				*dest++ = 0xFFFF00;
+			}else{
+				*dest++ = c;
+			}
 		}
 		*dest = 0;
 	}else{
