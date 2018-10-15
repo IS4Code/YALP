@@ -43,19 +43,13 @@ static int take(lua_State *L)
 static int bind(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
-	lua_pushinteger(L, lua_gettop(L));
-	lua_insert(L, 1);
+	int nups = lua::packupvals(L, 1, lua_gettop(L));
 	lua_pushcclosure(L, [](lua_State *L)
 	{
-		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
-		luaL_checkstack(L, num, nullptr);
-		for(int i = 0; i < num; i++)
-		{
-			lua_pushvalue(L, lua_upvalueindex(2 + i));
-		}
+		int num = lua::unpackupvals(L, 1);
 		lua_rotate(L, 1, num);
 		return lua::tailcall(L, lua_gettop(L) - 1);
-	}, lua_gettop(L));
+	}, nups);
 	return 1;
 }
 
@@ -375,19 +369,13 @@ static int map(lua_State *L)
 
 static int concat(lua_State *L)
 {
-	lua_pushinteger(L, lua_gettop(L));
-	lua_insert(L, 1);
+	int nups = lua::packupvals(L, 1, lua_gettop(L));
 	lua_pushcclosure(L, [](lua_State *L)
 	{
-		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
-		luaL_checkstack(L, num, nullptr);
-		for(int i = 0; i < num; i++)
-		{
-			lua_pushvalue(L, lua_upvalueindex(2 + i));
-		}
+		int num = lua::unpackupvals(L, 1);
 		lua_rotate(L, 1, num);
 		return lua_gettop(L);
-	}, lua_gettop(L));
+	}, nups);
 	return 1;
 }
 

@@ -224,6 +224,10 @@ namespace lua
 	{
 		return luaL_loadbufferx(L, buff, Size - 1, name, mode);
 	}
+
+	int packupvals(lua_State *L, int start, int num);
+
+	int unpackupvals(lua_State *L, int start);
 }
 
 #endif

@@ -443,8 +443,8 @@ int vacall(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	lua_pushvalue(L, lua_upvalueindex(1));
-	lua_pushinteger(L, lua_gettop(L) - 1);
-	lua_rotate(L, 1, 2);
+	lua_insert(L, 1);
+	int nups = lua::packupvals(L, 2, lua_gettop(L) - 1);
 	lua_pushcclosure(L, [](lua_State *L)
 	{
 		auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
@@ -495,12 +495,7 @@ int vacall(lua_State *L)
 			lua_replace(L, i);
 		}
 
-		int num = (int)lua_tointeger(L, lua_upvalueindex(2));
-		luaL_checkstack(L, num, nullptr);
-		for(int i = 1; i <= num; i++)
-		{
-			lua_pushvalue(L, lua_upvalueindex(2 + i));
-		}
+		int num = lua::unpackupvals(L, 2);
 		lua_rotate(L, 1, num);
 		return lua::pcallk(L, lua_gettop(L) - 1, restore ? LUA_MULTRET : 0, 0, [=](lua_State *L, int status)
 		{
@@ -536,7 +531,7 @@ int vacall(lua_State *L)
 				}
 			}
 		});
-	}, lua_gettop(L));
+	}, nups + 1);
 	return 1;
 }
 

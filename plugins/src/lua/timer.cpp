@@ -94,23 +94,15 @@ static int settimer(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	auto interval = luaL_checkinteger(L, 2);
-	if(lua_gettop(L) > 2)
+	lua_remove(L, 2);
+	if(lua_gettop(L) > 1)
 	{
-		lua_pushinteger(L, lua_gettop(L) - 2);
-		lua_replace(L, 2);
+		int nups = lua::packupvals(L, 1, lua_gettop(L));
 		lua_pushcclosure(L, [](lua_State *L)
 		{
-			lua_pushvalue(L, lua_upvalueindex(1));
-			int num = (int)lua_tointeger(L, lua_upvalueindex(2));
-			luaL_checkstack(L, num, nullptr);
-			for(int i = 1; i <= num; i++)
-			{
-				lua_pushvalue(L, lua_upvalueindex(2 + i));
-			}
-			return lua::tailcall(L, num);
-		}, lua_gettop(L));
-	}else{
-		lua_remove(L, 2);
+			int num = lua::unpackupvals(L, 1);
+			return lua::tailcall(L, num - 1);
+		}, nups);
 	}
 	
 	int ref = luaL_ref(L, LUA_REGISTRYINDEX);

@@ -45,26 +45,21 @@ public:
 int forward(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
-	lua_pushinteger(L, lua_gettop(L));
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_getfield(L, lua_upvalueindex(1), "#lua");
 	int numresults = lua::numresults(L);
 	lua_pushinteger(L, numresults);
-	lua_rotate(L, 1, 4);
+	lua_rotate(L, 1, 3);
+	int nups = lua::packupvals(L, 4, lua_gettop(L) - 3);
 	lua_pushcclosure(L, [](lua_State *L)
 	{
-		int res = (int)lua_tointeger(L, lua_upvalueindex(4));
+		int res = (int)lua_tointeger(L, lua_upvalueindex(3));
 		lua_pushnil(L);
-		lua_replace(L, lua_upvalueindex(4));
+		lua_replace(L, lua_upvalueindex(3));
 
-		lua_pushvalue(L, lua_upvalueindex(3));
-		lua_setfield(L, lua_upvalueindex(2), "#lua");
-		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
-		luaL_checkstack(L, num, nullptr);
-		for(int i = 1; i <= num; i++)
-		{
-			lua_pushvalue(L, lua_upvalueindex(4 + i));
-		}
+		lua_pushvalue(L, lua_upvalueindex(2));
+		lua_setfield(L, lua_upvalueindex(1), "#lua");
+		int num = lua::unpackupvals(L, 4);
 		lua_call(L, num - 1, res);
 		
 		if(res == LUA_MULTRET || res > 0)
@@ -86,7 +81,7 @@ int forward(lua_State *L)
 			lua_replace(L, lua_upvalueindex(4));
 		}
 		return 0;
-	}, lua_gettop(L));
+	}, nups + 3);
 	if(numresults != 0)
 	{
 		lua_pushvalue(L, -1);

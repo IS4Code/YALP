@@ -401,3 +401,49 @@ int lua::tailyield(lua_State *L, int n)
 	});
 	return lua_gettop(L) - top;
 }
+
+int lua::packupvals(lua_State *L, int start, int num)
+{
+	int available = 255 - start - 1;
+	if(num > available)
+	{
+		luaL_checkstack(L, 2, nullptr);
+		lua_pushinteger(L, num);
+		lua_insert(L, -num - 1);
+		int tpos = lua_absindex(L, -num + 255 - 2);
+		lua_createtable(L, num - available, 0);
+		lua_insert(L, tpos);
+		num -= available;
+		do{
+			lua_rawseti(L, tpos, num);
+		}while(--num > 0);
+		return available + 2;
+	}else{
+		luaL_checkstack(L, 1, nullptr);
+		lua_pushinteger(L, num);
+		lua_insert(L, -num - 1);
+		return num + 1;
+	}
+}
+
+int lua::unpackupvals(lua_State *L, int start)
+{
+	int num = (int)lua_tointeger(L, lua_upvalueindex(start));
+	luaL_checkstack(L, num, nullptr);
+	int remaining = num + start - 255 + 1;
+	if(remaining > 0)
+	{
+		num -= remaining;
+	}else{
+		remaining = 0;
+	}
+	for(int i = 1; i <= num; i++)
+	{
+		lua_pushvalue(L, lua_upvalueindex(start + i));
+	}
+	for(int i = 1; i <= remaining; i++)
+	{
+		lua_rawgeti(L, lua_upvalueindex(255), i);
+	}
+	return num + remaining;
+}
