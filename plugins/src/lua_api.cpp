@@ -373,6 +373,24 @@ static int map(lua_State *L)
 	return map_cont(L, LUA_OK, 1 << 8);
 }
 
+static int concat(lua_State *L)
+{
+	lua_pushinteger(L, lua_gettop(L));
+	lua_insert(L, 1);
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		int num = (int)lua_tointeger(L, lua_upvalueindex(1));
+		luaL_checkstack(L, num, nullptr);
+		for(int i = 0; i < num; i++)
+		{
+			lua_pushvalue(L, lua_upvalueindex(2 + i));
+		}
+		lua_rotate(L, 1, num);
+		return lua_gettop(L);
+	}, lua_gettop(L));
+	return 1;
+}
+
 static int debug_numresults(lua_State *L)
 {
 	int level = (int)luaL_optinteger(L, 1, 1);
@@ -428,6 +446,9 @@ static int open_base(lua_State *L)
 
 	lua_pushcfunction(L, map);
 	lua_setfield(L, -2, "map");
+
+	lua_pushcfunction(L, concat);
+	lua_setfield(L, -2, "concat");
 
 	open_package(L);
 	lua_pop(L, 1);
