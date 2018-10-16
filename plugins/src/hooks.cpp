@@ -23,6 +23,8 @@ class amx_hook_func<Ret(*)(Args...)>
 public:
 	typedef Ret hook_ftype(Ret(*)(Args...), Args...);
 
+	typedef Ret AMXAPI handler_ftype(Args...);
+
 	template <subhook_t &Hook, hook_ftype *Handler>
 	static Ret AMXAPI handler(Args... args)
 	{
@@ -30,37 +32,43 @@ public:
 	}
 };
 
-template <int Index, class FType, typename amx_hook_func<FType>::hook_ftype Func>
+template <int Index>
 class amx_hook
 {
 	static subhook_t hook;
 
 public:
-	static void load()
+	template <class FType, typename amx_hook_func<FType>::hook_ftype *Func>
+	struct ctl
 	{
-		hook = subhook_new(reinterpret_cast<void*>(((FType*)pAMXFunctions)[Index]), reinterpret_cast<void*>(&amx_hook_func<FType>::handler<hook, Func>), {});
-		subhook_install(hook);
-	}
-
-	static void unload()
-	{
-		subhook_remove(hook);
-		subhook_free(hook);
-	}
-
-	static FType orig()
-	{
-		if(subhook_is_installed(hook))
+		static void load()
 		{
-			return reinterpret_cast<FType>(subhook_get_trampoline(hook));
-		}else{
-			return ((FType*)pAMXFunctions)[Index];
+			typename amx_hook_func<FType>::handler_ftype *hookfn = &amx_hook_func<FType>::template handler<hook, Func>;
+
+			hook = subhook_new(reinterpret_cast<void*>(((FType*)pAMXFunctions)[Index]), reinterpret_cast<void*>(hookfn), {});
+			subhook_install(hook);
 		}
-	}
+
+		static void unload()
+		{
+			subhook_remove(hook);
+			subhook_free(hook);
+		}
+
+		static FType orig()
+		{
+			if(subhook_is_installed(hook))
+			{
+				return reinterpret_cast<FType>(subhook_get_trampoline(hook));
+			}else{
+				return ((FType*)pAMXFunctions)[Index];
+			}
+		}
+	};
 };
 
-template <int index, class FType, typename amx_hook_func<FType>::hook_ftype Func>
-subhook_t amx_hook<index, FType, Func>::hook;
+template <int index>
+subhook_t amx_hook<index>::hook;
 
 #define AMX_HOOK_FUNC(Func, ...) Func(decltype(&::Func) orig, __VA_ARGS__)
 namespace hooks
@@ -200,7 +208,7 @@ namespace hooks
 	}
 }
 
-#define amx_Hook(Func) amx_hook<PLUGIN_AMX_EXPORT_##Func, decltype(&::amx_##Func), &hooks::amx_##Func>
+#define amx_Hook(Func) amx_hook<PLUGIN_AMX_EXPORT_##Func>::ctl<decltype(&::amx_##Func), &hooks::amx_##Func>
 
 void hooks::load()
 {
