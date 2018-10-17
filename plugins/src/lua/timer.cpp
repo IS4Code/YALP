@@ -220,7 +220,7 @@ static int parallel(lua_State *L)
 	lua_insert(L, 1);
 	if(!lua_isinteger(L, 2))
 	{
-		lua_pushinteger(L, 100000);
+		lua_pushinteger(L, 256);
 		lua_insert(L, 2);
 	}
 	lua_pushvalue(L, lua_upvalueindex(2));
