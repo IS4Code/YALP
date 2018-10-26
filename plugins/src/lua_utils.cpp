@@ -4,6 +4,7 @@
 #include "lua/lstate.h"
 
 #include <unordered_map>
+#include <assert.h>
 
 void errortable(lua_State *L, int error)
 {
