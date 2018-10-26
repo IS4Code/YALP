@@ -2,6 +2,7 @@
 #include "hooks.h"
 #include "natives.h"
 #include "amxutils.h"
+#include "lua_api.h"
 #include "lua/interop.h"
 #include "lua/timer.h"
 #include "lua/remote.h"
@@ -55,5 +56,6 @@ PLUGIN_EXPORT int PLUGIN_CALL AmxUnload(AMX *amx)
 
 PLUGIN_EXPORT void PLUGIN_CALL ProcessTick()
 {
+	lua::process_tick();
 	lua::timer::tick();
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <queue>
 
 static int custom_print(lua_State *L)
 {
@@ -387,6 +388,29 @@ static int debug_numresults(lua_State *L)
 	return 1;
 }
 
+std::queue<std::weak_ptr<lua_State*>> exit_queue;
+
+static int exit(lua_State *L)
+{
+	if(lua::mainthread(L) != L)
+	{
+		return luaL_error(L, "must be called in the main thread");
+	}
+	lua_Hook hook = [](lua_State *L, lua_Debug *ar)
+	{
+		luaL_error(L, "exit requested");
+	};
+
+	auto ptr = std::make_shared<lua_State*>(L);
+	exit_queue.push(ptr);
+	lua::pushuserdata(L, std::move(ptr));
+	luaL_ref(L, LUA_REGISTRYINDEX);
+
+	lua_sethook(L, hook, LUA_MASKCALL | LUA_MASKCOUNT | LUA_MASKRET, 1);
+	hook(L, nullptr);
+	return 0;
+}
+
 static int open_package(lua_State *L)
 {
 	luaopen_package(L);
@@ -441,6 +465,9 @@ static int open_base(lua_State *L)
 
 	lua_pushcfunction(L, concat);
 	lua_setfield(L, -2, "concat");
+
+	lua_pushcfunction(L, exit);
+	lua_setfield(L, -2, "exit");
 
 	open_package(L);
 	lua_pop(L, 1);
@@ -673,4 +700,25 @@ AMX *lua::bound_amx(lua_State *L)
 		}
 	}
 	return nullptr;
+}
+
+void lua::process_tick()
+{
+	decltype(exit_queue) queue;
+	exit_queue.swap(queue);
+
+	while(!queue.empty())
+	{
+		auto ptr = std::move(queue.front());
+		queue.pop();
+		if(auto lock = ptr.lock())
+		{
+			if(!lua::active(*lock))
+			{
+				lua_close(*lock);
+			}else{
+				exit_queue.push(lock);
+			}
+		}
+	}
 }

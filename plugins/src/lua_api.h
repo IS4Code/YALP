@@ -11,6 +11,7 @@ namespace lua
 	int bind(AMX *amx, cell *retval, int index);
 	void report_error(lua_State *L, int error);
 	AMX *bound_amx(lua_State *L);
+	void process_tick();
 }
 
 #endif
