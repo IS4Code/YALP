@@ -404,6 +404,10 @@ static int open_package(lua_State *L)
 static int open_base(lua_State *L)
 {
 	luaopen_base(L);
+
+	lua::pushliteral(L, "YALP 0.2");
+	lua_setfield(L, -2, "YALP_VERSION");
+
 	lua_pushcfunction(L, custom_print);
 	lua_setfield(L, -2, "print");
 	lua_pushcfunction(L, take);
