@@ -247,7 +247,7 @@ int span(lua_State *L)
 	lua_newtable(L);
 
 	lua_createtable(L, 0, 10);
-	lua_pushstring(L, "span");
+	lua::pushliteral(L, "span");
 	lua_setfield(L, -2, "__name");
 	lua_pushboolean(L, false);
 	lua_setfield(L, -2, "__metatable");
@@ -567,7 +567,7 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	int table = lua_absindex(L, -1);
 
 	lua_createtable(L, 0, 7);
-	lua_pushstring(L, "buffer");
+	lua::pushliteral(L, "buffer");
 	lua_setfield(L, -2, "__name");
 	lua_pushboolean(L, false);
 	lua_setfield(L, -2, "__metatable");
@@ -584,7 +584,7 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	int buffer = lua_absindex(L, -1);
 
 	lua_createtable(L, 0, 7);
-	lua_pushstring(L, "cbuffer");
+	lua::pushliteral(L, "cbuffer");
 	lua_setfield(L, -2, "__name");
 	lua_pushboolean(L, false);
 	lua_setfield(L, -2, "__metatable");
@@ -620,7 +620,7 @@ void lua::interop::init_memory(lua_State *L, AMX *amx)
 	lua::pushuserdata(L, amx); //do not change to lightuserdata
 
 	lua_createtable(L, 0, 6);
-	lua_pushstring(L, "heap");
+	lua::pushliteral(L, "heap");
 	lua_setfield(L, -2, "__name");
 	lua_pushboolean(L, false);
 	lua_setfield(L, -2, "__metatable");

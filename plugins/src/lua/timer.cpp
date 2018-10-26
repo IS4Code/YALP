@@ -172,7 +172,7 @@ static int parallelex(lua_State *L)
 		lua_createtable(L, 0, 2);
 		lua_pushvalue(L, -1);
 		lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
-		lua_pushstring(L, "k");
+		lua::pushliteral(L, "k");
 		lua_setfield(L, -2, "__mode");
 		lua_pushvalue(L, -1);
 		lua_setmetatable(L, -2);
@@ -266,7 +266,7 @@ static void timeout_hook(lua_State *L, lua_Debug *ar)
 		} else {
 			lua_pushfstring(L, "");
 		}
-		lua_pushstring(L, "function was terminated after timeout");
+		lua::pushliteral(L, "function was terminated after timeout");
 		lua_concat(L, 2);
 		lua_error(L);
 	}

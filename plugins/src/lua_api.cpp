@@ -390,12 +390,12 @@ static int debug_numresults(lua_State *L)
 static int open_package(lua_State *L)
 {
 	luaopen_package(L);
-	lua_pushstring(L, "scriptfiles" LUA_DIRSEP "lua" LUA_DIRSEP "?.lua");
+	lua::pushliteral(L, "scriptfiles" LUA_DIRSEP "lua" LUA_DIRSEP "?.lua");
 	lua_setfield(L, -2, "path");
 #ifdef _WIN32
-	lua_pushstring(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.dll");
+	lua::pushliteral(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.dll");
 #else
-	lua_pushstring(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.so");
+	lua::pushliteral(L, "plugins" LUA_DIRSEP "lua" LUA_DIRSEP "?.so");
 #endif
 	lua_setfield(L, -2, "cpath");
 	return 1;
@@ -509,7 +509,7 @@ static int coroutine_resumehooked(lua_State *L)
 			lua_createtable(L, 0, 2);
 			lua_pushvalue(L, -1);
 			lua_rawsetp(L, LUA_REGISTRYINDEX, &HOOKKEY);
-			lua_pushstring(L, "k");
+			lua::pushliteral(L, "k");
 			lua_setfield(L, -2, "__mode");
 			lua_pushvalue(L, -1);
 			lua_setmetatable(L, -2);

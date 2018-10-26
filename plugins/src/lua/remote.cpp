@@ -433,7 +433,7 @@ namespace lua
 			lua_pushvalue(L, -1);
 			lua_rawsetp(L, LUA_REGISTRYINDEX, &PROXYMTKEY);
 
-			lua_pushstring(L, "proxy");
+			lua::pushliteral(L, "proxy");
 			lua_setfield(L, -2, "__name");
 			lua_pushcfunction(L, lua_foreign_reference::op<&lua_foreign_reference::index>);
 			lua_setfield(L, -2, "__index");

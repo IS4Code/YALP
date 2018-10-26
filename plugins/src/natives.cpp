@@ -307,9 +307,9 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 	}else{
 		if(lua_gettop(L) == 0 || !lua_isfunction(L, -1))
 		{
-			lua_pushstring(L, "a function must be provided");
+			lua::pushliteral(L, "a function must be provided");
 		}else{
-			lua_pushstring(L, "this Lua state is already bound to an AMX");
+			lua::pushliteral(L, "this Lua state is already bound to an AMX");
 		}
 	}
 	return 0;

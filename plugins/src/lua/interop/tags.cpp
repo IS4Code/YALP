@@ -154,7 +154,7 @@ static int tagname(lua_State *L)
 		cell tag_id = reinterpret_cast<cell>(lua::checklightudata(L, i));
 		if(tag_id == 0x80000000 || tag_id == 0)
 		{
-			lua_pushlstring(L, "", 0);
+			lua::pushliteral(L, "");
 			lua_replace(L, i);
 			continue;
 		}
