@@ -1,6 +1,7 @@
 #ifndef LUA_ADAPT_H_INCLUDED
 #define LUA_ADAPT_H_INCLUDED
 
+#include "main.h"
 #include "lua/lualibs.h"
 #include "sdk/amx/amx.h"
 
@@ -175,23 +176,26 @@ namespace lua
 
 	};
 
+	bool check_params(AMX *amx, cell *params, cell needed);
+
 	template <void(*Func)(lua_State *L)>
 	struct adapt<void(*)(lua_State *L), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 1)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			Func(L);
 			return 0;
 		}
 	};
 
-
 	template <class Return, Return(*Func)(lua_State *L)>
 	struct adapt<Return(*)(lua_State *L), Func>
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 1)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			return adapt_return<Return>::convert(Func(L));
 		}
@@ -202,6 +206,7 @@ namespace lua
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 2)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			Func(L, adapt_arg<Arg1>::convert(params[2]));
 			return 0;
@@ -213,6 +218,7 @@ namespace lua
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 2)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2])));
 		}
@@ -223,6 +229,7 @@ namespace lua
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 3)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3]));
 			return 0;
@@ -234,6 +241,7 @@ namespace lua
 	{
 		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
 		{
+			if(!check_params(amx, params, 3)) return 0;
 			auto L = reinterpret_cast<lua_State*>(params[1]);
 			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3])));
 		}

@@ -14,6 +14,7 @@
 // native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
 static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 0)) return 0;
 	auto L = luaL_newstate();
 	if(L)
 	{
@@ -57,6 +58,7 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 // native lua_dostring(Lua:L, const str[]);
 static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	char *str;
@@ -68,6 +70,7 @@ static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 // native bool:lua_close(Lua:L);
 static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 1)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	if(lua::active(L))
 	{
@@ -83,6 +86,7 @@ static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 // native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 static cell AMX_NATIVE_CALL n_lua_pcall(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 3)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	return lua_pcall(L, params[2], params[3], optparam(4, 0));
@@ -91,6 +95,7 @@ static cell AMX_NATIVE_CALL n_lua_pcall(AMX *amx, cell *params)
 // native lua_call(Lua:L, nargs, nresults);
 static cell AMX_NATIVE_CALL n_lua_call(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 3)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	switch(lua_pcall(L, params[2], params[3], 0))
@@ -114,6 +119,7 @@ static cell AMX_NATIVE_CALL n_lua_call(AMX *amx, cell *params)
 // native lua_load(Lua:L, const reader[], data, bufsize, chunkname[]="");
 static cell AMX_NATIVE_CALL n_lua_load(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 4)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	const char *reader;
@@ -180,6 +186,7 @@ static cell AMX_NATIVE_CALL n_lua_load(AMX *amx, cell *params)
 // native lua_stackdump(Lua:L, depth=-1);
 static cell AMX_NATIVE_CALL n_lua_stackdump(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 1)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	int top = lua_gettop(L);
 	int bottom = 1;
@@ -244,6 +251,7 @@ static cell AMX_NATIVE_CALL n_lua_loopback(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 4)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	int idx = lua_absindex(L, params[2]);
 	size_t len;
@@ -251,16 +259,8 @@ static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 	bool pop = false;
 	if(!str)
 	{
-		if(lua_getglobal(L, "tostring") == LUA_TFUNCTION)
-		{
-			lua_pushvalue(L, idx);
-			lua_pcall(L, 1, 1, 0);
-			str = lua_tolstring(L, -1, &len);
-			pop = true;
-		}else{
-			str = luaL_typename(L, idx);
-			len = std::strlen(str);
-		}
+		str = luaL_tolstring(L, idx, &len);
+		pop = true;
 	}
 		
 	cell *addr;
@@ -278,12 +278,14 @@ static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_tointeger(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	return static_cast<cell>(lua_tointeger(L, params[2]));
 }
 
 static cell AMX_NATIVE_CALL n_lua_tonumber(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	float fval = static_cast<float>(lua_tonumber(L, params[2]));
 	return amx_ftoc(fval);
@@ -291,6 +293,7 @@ static cell AMX_NATIVE_CALL n_lua_tonumber(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_pop(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	lua_pop(L, params[2]);
 	return 0;
@@ -298,6 +301,7 @@ static cell AMX_NATIVE_CALL n_lua_pop(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 1)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	cell ret = lua::init_bind(L, amx);
 	if(ret)
@@ -318,6 +322,7 @@ static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_pushpfunction(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	char *name;
@@ -359,6 +364,7 @@ static cell AMX_NATIVE_CALL n_lua_pushpfunction(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_gettable(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	switch(lua::pgettable(L, params[2]))
 	{
@@ -380,6 +386,7 @@ static cell AMX_NATIVE_CALL n_lua_gettable(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_getfield(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 3)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[3], name);
@@ -404,6 +411,7 @@ static cell AMX_NATIVE_CALL n_lua_getfield(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_getglobal(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[2], name);
@@ -430,6 +438,7 @@ static cell AMX_NATIVE_CALL n_lua_getglobal(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_settable(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	switch(lua::psettable(L, params[2]))
 	{
@@ -451,6 +460,7 @@ static cell AMX_NATIVE_CALL n_lua_settable(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 3)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[3], name);
@@ -475,6 +485,7 @@ static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[2], name);
@@ -502,6 +513,7 @@ static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_len(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	cell len;
@@ -527,6 +539,7 @@ static cell AMX_NATIVE_CALL n_lua_len(AMX *amx, cell *params)
 
 static cell AMX_NATIVE_CALL n_lua_pushstring(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *str;
 	amx_StrParam(amx, params[2], str);
@@ -666,6 +679,7 @@ void add_format(std::string &buf, const char *begin, const char *end, cell *arg)
 
 static cell AMX_NATIVE_CALL n_lua_pushfstring(AMX *amx, cell *params)
 {
+	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 
 	cell *addr;
