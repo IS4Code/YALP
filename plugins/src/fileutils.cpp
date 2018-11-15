@@ -4,7 +4,6 @@
 #ifdef _WIN32
 #include "subhook/subhook.h"
 #include <io.h>
-#include <fcntl.h>
 #include <thread>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -12,6 +11,7 @@
 #else
 #include <unistd.h>
 #endif
+#include <fcntl.h>
 
 #ifdef _WIN32
 static decltype(&SetFilePointer) sfk_trampoline;
@@ -90,7 +90,9 @@ FILE *lua::marshal_file(lua_State *L, cell value, int fseek)
 
 	if(fd != -1)
 	{
-		f = fdopen(fd, "r+");
+		int flags = fcntl(fd, F_GETFL);
+		const char *access = (flags & O_RDWR) ? "r+" : ((flags & O_WRONLY) ? "w" : "r");
+		f = fdopen(fd, access);
 		if(!f)
 		{
 			close(fd);
@@ -151,7 +153,9 @@ cell lua::marshal_file(lua_State *L, FILE *file, int ftemp)
 	{
 		return 0;
 	}
-	value = reinterpret_cast<cell>(fdopen(fd, "r+"));
+	int flags = fcntl(fd, F_GETFL);
+	const char *access = (flags & O_RDWR) ? "r+" : ((flags & O_WRONLY) ? "w" : "r");
+	value = reinterpret_cast<cell>(fdopen(fd, access));
 	if(!value)
 	{
 		close(fd);
