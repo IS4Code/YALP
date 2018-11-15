@@ -163,6 +163,9 @@
     <ClCompile Include="src\lua_adapt.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileutils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\subhook\subhook.h">
@@ -349,6 +352,9 @@
       <Filter>src\lua\interop</Filter>
     </ClInclude>
     <ClInclude Include="src\lua_adapt.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileutils.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

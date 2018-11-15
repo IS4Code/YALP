@@ -1,18 +1,6 @@
 #include "result.h"
 #include "lua_utils.h"
-
-#include <stdio.h>
-#ifdef _WIN32
-#include "subhook/subhook.h"
-#include <io.h>
-#include <fcntl.h>
-#include <thread>
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <aclapi.h>
-#else
-#include <unistd.h>
-#endif
+#include "fileutils.h"
 
 int asnone(lua_State *L)
 {
@@ -79,40 +67,6 @@ int ashandle(lua_State *L)
 	return 1;
 }
 
-#ifdef _WIN32
-static decltype(&SetFilePointer) sfk_trampoline;
-static HANDLE sfp_handle;
-static std::thread::id sfp_thread;
-
-DWORD WINAPI HookSetFilePointer(_In_ HANDLE hFile, _In_ LONG lDistanceToMove, _Inout_opt_ PLONG lpDistanceToMoveHigh, _In_ DWORD dwMoveMethod)
-{
-	if(sfp_thread == std::this_thread::get_id())
-	{
-		sfp_handle = hFile;
-	}
-	return sfk_trampoline(hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
-}
-
-template <class Func>
-class subhook_guard
-{
-	subhook_t hook;
-
-public:
-	subhook_guard(Func *src, Func *dst, Func *&trampoline) : hook(subhook_new(reinterpret_cast<void*>(src), reinterpret_cast<void*>(dst), {}))
-	{
-		trampoline = reinterpret_cast<Func*>(subhook_get_trampoline(hook));
-		subhook_install(hook);
-	}
-
-	~subhook_guard()
-	{
-		subhook_remove(hook);
-		subhook_free(hook);
-	}
-};
-#endif
-
 template <bool DestroyOriginal>
 int asfile(lua_State *L)
 {
@@ -129,53 +83,7 @@ int asfile(lua_State *L)
 	}
 	int mtindex = lua_absindex(L, -1);
 
-	FILE *f = nullptr;
-
-#ifdef _WIN32
-	sfp_handle = nullptr;
-	sfp_thread = std::this_thread::get_id();
-
-	{
-		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, sfk_trampoline);
-
-		lua_pushvalue(L, lua_upvalueindex(1)); //fseek
-		lua_pushvalue(L, 1);
-		lua_pushlightuserdata(L, reinterpret_cast<void*>(0));
-		lua_pushlightuserdata(L, reinterpret_cast<void*>(1));
-		lua_call(L, 3, 0);
-	}
-
-	HANDLE hfile;
-	if(sfp_handle == nullptr || !DuplicateHandle(GetCurrentProcess(), sfp_handle, GetCurrentProcess(), &hfile, 0, TRUE, DUPLICATE_SAME_ACCESS))
-	{
-		return lua::argerror(L, 1, "invalid file handle");
-	}
-
-	if(DestroyOriginal)
-	{
-		lua_pushvalue(L, lua_upvalueindex(2)); //fclose
-		lua_pushvalue(L, 1);
-		lua_call(L, 1, 0);
-	}
-
-	int fd = _open_osfhandle(reinterpret_cast<intptr_t>(hfile), _O_RDWR);
-	if(fd != -1)
-	{
-		f = _fdopen(fd, "r+");
-		if(!f)
-		{
-			_close(fd);
-		}
-	}else{
-		CloseHandle(hfile);
-	}
-#else
-	int fd = fileno(reinterpret_cast<FILE*>(ptr));
-	if(fd == -1)
-	{
-		return lua::argerror(L, 1, "invalid file handle");
-	}
-	fd = dup(fd);
+	FILE *f = lua::marshal_file(L, reinterpret_cast<cell>(ptr), lua_upvalueindex(2));
 
 	if(DestroyOriginal)
 	{
@@ -183,16 +91,6 @@ int asfile(lua_State *L)
 		lua_pushvalue(L, 1);
 		lua_call(L, 1, 0);
 	}
-
-	if(fd != -1)
-	{
-		f = fdopen(fd, "r+");
-		if(!f)
-		{
-			close(fd);
-		}
-	}
-#endif
 
 	if(!f)
 	{
@@ -235,10 +133,10 @@ void lua::interop::init_result(lua_State *L, AMX *amx)
 
 #ifdef _WIN32
 	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fseek");
+	lua::pushstring(L, "fclose");
 	lua_call(L, 1, 1);
 	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fclose");
+	lua::pushstring(L, "fseek");
 	lua_call(L, 1, 1);
 	lua_pushcclosure(L, asfile<true>, 2);
 	lua_setfield(L, table, "asfile");

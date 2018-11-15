@@ -169,6 +169,7 @@
     <ClCompile Include="lib\subhook\subhook.c" />
     <ClCompile Include="src\amxutils.cpp" />
     <ClCompile Include="src\amx\loader.cpp" />
+    <ClCompile Include="src\fileutils.cpp" />
     <ClCompile Include="src\hooks.cpp" />
     <ClCompile Include="src\lua\interop.cpp" />
     <ClCompile Include="src\lua\interop\memory.cpp" />
@@ -237,6 +238,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\amxutils.h" />
     <ClInclude Include="src\amx\loader.h" />
+    <ClInclude Include="src\fileutils.h" />
     <ClInclude Include="src\fixes\linux.h" />
     <ClInclude Include="src\hooks.h" />
     <ClInclude Include="src\lua\interop.h" />
