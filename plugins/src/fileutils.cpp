@@ -14,19 +14,6 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
-static decltype(&SetFilePointer) sfk_trampoline;
-static HANDLE sfp_handle;
-static std::thread::id sfp_thread;
-
-DWORD WINAPI HookSetFilePointer(_In_ HANDLE hFile, _In_ LONG lDistanceToMove, _Inout_opt_ PLONG lpDistanceToMoveHigh, _In_ DWORD dwMoveMethod)
-{
-	if(sfp_thread == std::this_thread::get_id())
-	{
-		sfp_handle = hFile;
-	}
-	return sfk_trampoline(hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
-}
-
 template <class Func>
 class subhook_guard
 {
@@ -47,24 +34,38 @@ public:
 };
 #endif
 
+#ifdef _WIN32
+static thread_local struct {
+	decltype(&SetFilePointer) trampoline;
+	HANDLE handle;
+} sfp_info;
+
+DWORD WINAPI HookSetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod)
+{
+	auto &info = sfp_info;
+	info.handle = hFile;
+	return info.trampoline(hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
+}
+#endif
+
 FILE *lua::marshal_file(lua_State *L, cell value, int fseek)
 {
 	FILE *f;
 
 #ifdef _WIN32
-	sfp_handle = nullptr;
-	sfp_thread = std::this_thread::get_id();
+	auto &info = sfp_info;
+	info.handle = nullptr;
 	lua_pushvalue(L, fseek);
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(0));
 	lua_pushlightuserdata(L, reinterpret_cast<void*>(1));
 	{
-		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, sfk_trampoline);
+		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, info.trampoline);
 		lua_call(L, 3, 0);
 	}
 
 	HANDLE hfile;
-	if(sfp_handle == nullptr || !DuplicateHandle(GetCurrentProcess(), sfp_handle, GetCurrentProcess(), &hfile, 0, TRUE, DUPLICATE_SAME_ACCESS))
+	if(info.handle == nullptr || !DuplicateHandle(GetCurrentProcess(), info.handle, GetCurrentProcess(), &hfile, 0, TRUE, DUPLICATE_SAME_ACCESS))
 	{
 		return reinterpret_cast<FILE*>(lua::argerror(L, 1, "invalid file handle"));
 	}
@@ -103,17 +104,19 @@ FILE *lua::marshal_file(lua_State *L, cell value, int fseek)
 }
 
 #ifdef _WIN32
-static decltype(&CreateFileA) cf_trampoline;
-static HANDLE cf_handle;
-static std::thread::id cf_thread;
+static thread_local struct {
+	decltype(&CreateFileA) trampoline;
+	HANDLE handle;
+} cf_info;
 
-HANDLE WINAPI HookCreateFileA(_In_ LPCSTR lpFileName, _In_ DWORD dwDesiredAccess, _In_ DWORD dwShareMode, _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes, _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes, _In_opt_ HANDLE hTemplateFile)
+HANDLE WINAPI HookCreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 {
-	if(cf_thread == std::this_thread::get_id())
+	auto &info = cf_info;
+	if(info.handle)
 	{
-		return cf_handle;
+		return info.handle;
 	}
-	return cf_trampoline(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	return info.trampoline(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 #endif
 
@@ -132,11 +135,11 @@ cell lua::marshal_file(lua_State *L, FILE *file, int ftemp)
 		return 0;
 	}
 
-	cf_handle = hfile;
-	cf_thread = std::this_thread::get_id();
+	auto &info = cf_info;
+	info.handle = hfile;
 	lua_pushvalue(L, ftemp);
 	{
-		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA, cf_trampoline);
+		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA, info.trampoline);
 		lua_call(L, 0, 1);
 	}
 	value = reinterpret_cast<cell>(lua_touserdata(L, -1));
