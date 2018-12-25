@@ -1,6 +1,5 @@
 #include "result.h"
 #include "lua_utils.h"
-#include "fileutils.h"
 
 int asnone(lua_State *L)
 {
@@ -67,49 +66,6 @@ int ashandle(lua_State *L)
 	return 1;
 }
 
-template <bool DestroyOriginal>
-int asfile(lua_State *L)
-{
-	auto ptr = lua::checklightudata(L, 1);
-	if(!ptr)
-	{
-		lua_pushnil(L);
-		return 1;
-	}
-
-	if(luaL_getmetatable(L, LUA_FILEHANDLE) != LUA_TTABLE)
-	{
-		return luaL_error(L, "the io package is not loaded");
-	}
-	int mtindex = lua_absindex(L, -1);
-
-	FILE *f = lua::marshal_file(L, reinterpret_cast<cell>(ptr), lua_upvalueindex(2));
-
-	if(DestroyOriginal)
-	{
-		lua_pushvalue(L, lua_upvalueindex(1)); //fclose
-		lua_pushvalue(L, 1);
-		lua_call(L, 1, 0);
-	}
-
-	if(!f)
-	{
-		return luaL_error(L, "file descriptor cannot be created");
-	}
-
-	auto &file = lua::newuserdata<luaL_Stream>(L);
-	lua_pushvalue(L, mtindex);
-	lua_setmetatable(L, -2);
-	file.f = f;
-	file.closef = [](lua_State *L)
-	{
-		auto &file = lua::touserdata<luaL_Stream>(L, 1);
-		int res = fclose(file.f);
-		return luaL_fileresult(L, (res == 0), nullptr);
-	};
-	return 1;
-}
-
 void lua::interop::init_result(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -130,30 +86,4 @@ void lua::interop::init_result(lua_State *L, AMX *amx)
 	lua_setfield(L, table, "asoffset");
 	lua_pushcfunction(L, ashandle);
 	lua_setfield(L, table, "ashandle");
-
-#ifdef _WIN32
-	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fclose");
-	lua_call(L, 1, 1);
-	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fseek");
-	lua_call(L, 1, 1);
-	lua_pushcclosure(L, asfile<true>, 2);
-	lua_setfield(L, table, "asfile");
-
-	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fseek");
-	lua_call(L, 1, 1);
-	lua_pushcclosure(L, asfile<false>, 1);
-	lua_setfield(L, table, "asnewfile");
-#else
-	lua_getfield(L, table, "getnative");
-	lua::pushstring(L, "fclose");
-	lua_call(L, 1, 1);
-	lua_pushcclosure(L, asfile<true>, 1);
-	lua_setfield(L, table, "asfile");
-
-	lua_pushcfunction(L, asfile<false>);
-	lua_setfield(L, table, "asnewfile");
-#endif
 }

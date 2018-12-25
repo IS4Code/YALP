@@ -9,6 +9,7 @@
 #include "interop/memory.h"
 #include "interop/string.h"
 #include "interop/result.h"
+#include "interop/file.h"
 #include "interop/tags.h"
 #include "interop/sleep.h"
 
@@ -171,6 +172,7 @@ int lua::interop::loader(lua_State *L)
 		init_memory(L, amx);
 		init_string(L, amx);
 		init_result(L, amx);
+		init_file(L, amx);
 		init_tags(L, amx, tagcache);
 
 		lua_getfield(L, -1, "public");

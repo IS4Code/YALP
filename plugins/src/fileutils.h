@@ -7,8 +7,8 @@
 
 namespace lua
 {
-	FILE *marshal_file(lua_State *L, cell value, int fseek);
-	cell marshal_file(lua_State *L, FILE *file, int ftemp);
+	FILE *marshal_file(lua_State *L, cell value, AMX *amx, AMX_NATIVE fseek);
+	cell marshal_file(lua_State *L, FILE *file, AMX *amx, AMX_NATIVE ftemp);
 }
 
 #endif

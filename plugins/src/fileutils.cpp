@@ -48,20 +48,17 @@ DWORD WINAPI HookSetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDist
 }
 #endif
 
-FILE *lua::marshal_file(lua_State *L, cell value, int fseek)
+FILE *lua::marshal_file(lua_State *L, cell value, AMX *amx, AMX_NATIVE fseek)
 {
 	FILE *f;
 
 #ifdef _WIN32
 	auto &info = sfp_info;
 	info.handle = nullptr;
-	lua_pushvalue(L, fseek);
-	lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
-	lua_pushlightuserdata(L, reinterpret_cast<void*>(0));
-	lua_pushlightuserdata(L, reinterpret_cast<void*>(1));
 	{
 		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, info.trampoline);
-		lua_call(L, 3, 0);
+		cell params[] = {3 * sizeof(cell), value, 0, 1};
+		fseek(amx, params);
 	}
 
 	HANDLE hfile;
@@ -120,7 +117,7 @@ HANDLE WINAPI HookCreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dw
 }
 #endif
 
-cell lua::marshal_file(lua_State *L, FILE *file, int ftemp)
+cell lua::marshal_file(lua_State *L, FILE *file, AMX *amx, AMX_NATIVE ftemp)
 {
 	cell value;
 #ifdef _WIN32
@@ -137,12 +134,11 @@ cell lua::marshal_file(lua_State *L, FILE *file, int ftemp)
 
 	auto &info = cf_info;
 	info.handle = hfile;
-	lua_pushvalue(L, ftemp);
 	{
 		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA, info.trampoline);
-		lua_call(L, 0, 1);
+		cell params[] = {0};
+		value = ftemp(amx, params);
 	}
-	value = reinterpret_cast<cell>(lua_touserdata(L, -1));
 	lua_pop(L, 1);
 #else
 	int fd = fileno(file);

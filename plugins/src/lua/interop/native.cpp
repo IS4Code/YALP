@@ -66,8 +66,7 @@ int __call(lua_State *L)
 			auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
 			std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>> restorers;
-			std::vector<cell> file_cleanup;
-
+			
 			int paramcount = 0;
 			size_t len;
 			bool isconst;
@@ -189,18 +188,7 @@ int __call(lua_State *L)
 								rvector.push_back([](lua_State *L, cell value) { lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
 								break;
 							default:
-								if(luaL_testudata(L, -1, LUA_FILEHANDLE))
-								{
-									auto &file = lua::touserdata<luaL_Stream>(L, -1);
-									value = lua::marshal_file(L, file.f, lua_upvalueindex(5));
-									rvector.push_back([](lua_State *L, cell value) { lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
-									if(value)
-									{
-										file_cleanup.push_back(value);
-									}
-								}else{
-									return lua::argerror(L, i, "table index %d: cannot marshal %s", j, luaL_typename(L, -1));
-								}
+								return lua::argerror(L, i, "table index %d: cannot marshal %s", j, luaL_typename(L, -1));
 						}
 						lua_pop(L, 1);
 						*(addr++) = value;
@@ -208,14 +196,6 @@ int __call(lua_State *L)
 					*(addr++) = 0;
 					value = amx->hea;
 					amx->hea += clen;
-				}else if(luaL_testudata(L, i, LUA_FILEHANDLE))
-				{
-					auto &file = lua::touserdata<luaL_Stream>(L, i);
-					value = lua::marshal_file(L, file.f, lua_upvalueindex(5));
-					if(value)
-					{
-						file_cleanup.push_back(value);
-					}
 				}else{
 					if(lua_isnil(L, i) && paramcount == 0)
 					{
@@ -250,17 +230,6 @@ int __call(lua_State *L)
 					pair.second.second[j](L, *(addr++));
 					lua_settable(L, i);
 				}
-			}
-
-			for(cell file : file_cleanup)
-			{
-#ifdef _WIN32
-				lua_pushvalue(L, lua_upvalueindex(4)); //fclose
-				lua_pushlightuserdata(L, reinterpret_cast<void*>(file));
-				lua_call(L, 1, 0);
-#else
-				fclose(reinterpret_cast<FILE*>(file));
-#endif
 			}
 
 			errorcode = amx->error;
@@ -313,37 +282,13 @@ int getnative(lua_State *L)
 {
 	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
 	auto name = luaL_checkstring(L, 1);
-	bool bare = luaL_opt(L, lua::checkboolean, 2, false);
 	auto it = info->natives.find(name);
 	if(it != info->natives.end())
 	{
 		lua_pushvalue(L, lua_upvalueindex(1));
 		lua_pushlightuserdata(L, reinterpret_cast<void*>(it->second));
 		lua_pushvalue(L, lua_upvalueindex(2));
-		if(bare)
-		{
-#ifdef _WIN32
-			lua_pushnil(L);
-			lua_pushnil(L);
-			lua_pushcclosure(L, __call, 5);
-#else
-			lua_pushcclosure(L, __call, 3);
-#endif
-		}else{
-#ifdef _WIN32
-			lua_pushvalue(L, lua_upvalueindex(3));
-			lua::pushliteral(L, "fclose");
-			lua_pushboolean(L, true);
-			lua_call(L, 2, 1);
-			lua_pushvalue(L, lua_upvalueindex(3));
-			lua::pushliteral(L, "ftemp");
-			lua_pushboolean(L, true);
-			lua_call(L, 2, 1);
-			lua_pushcclosure(L, __call, 5);
-#else
-			lua_pushcclosure(L, __call, 3);
-#endif
-		}
+		lua_pushcclosure(L, __call, 3);
 		return 1;
 	}
 	lua_pushnil(L);
@@ -421,4 +366,20 @@ void lua::interop::amx_unregister_natives(AMX *amx)
 	{
 		amx_map.erase(it);
 	}
+}
+
+AMX_NATIVE lua::interop::find_native(AMX *amx, const char *native)
+{
+	auto it = amx_map.find(amx);
+	if(it == amx_map.end())
+	{
+		return nullptr;
+	}
+	auto &natives = it->second->natives;
+	auto it2 = natives.find(native);
+	if(it2 == natives.end())
+	{
+		return nullptr;
+	}
+	return it2->second;
 }
