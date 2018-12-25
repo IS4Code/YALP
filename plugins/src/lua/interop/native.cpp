@@ -51,11 +51,10 @@ public:
 
 int __call(lua_State *L)
 {
-	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	auto native = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
 	if(native)
 	{
-		auto amx = info->amx;
 		int errorcode;
 		cell result;
 		bool castresult = false;
@@ -65,7 +64,7 @@ int __call(lua_State *L)
 			auto hdr = (AMX_HEADER*)amx->base;
 			auto data = (amx->data != NULL) ? amx->data : amx->base + (int)hdr->dat;
 
-			std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>> restorers;
+			std::unique_ptr<std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>> restorers;
 			
 			int paramcount = 0;
 			size_t len;
@@ -155,7 +154,11 @@ int __call(lua_State *L)
 						return lua::amx_error(L, AMX_ERR_MEMORY);
 					}
 					auto addr = reinterpret_cast<cell*>(data + amx->hea);
-					auto &pair = restorers[i];
+					if(!restorers)
+					{
+						restorers = std::make_unique< std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>>();
+					}
+					auto &pair = (*restorers)[i];
 					pair.first = addr;
 					auto &rvector = pair.second;
 					for(int j = 1; j <= len; j++)
@@ -220,15 +223,18 @@ int __call(lua_State *L)
 				result = native(amx, params);
 			}
 
-			for(auto &pair : restorers)
+			if(restorers)
 			{
-				int i = pair.first;
-				cell *addr = pair.second.first;
-				for(size_t j = 0; j < pair.second.second.size(); j++)
+				for(auto &pair : *restorers)
 				{
-					lua_pushinteger(L, j + 1);
-					pair.second.second[j](L, *(addr++));
-					lua_settable(L, i);
+					int i = pair.first;
+					cell *addr = pair.second.first;
+					for(size_t j = 0; j < pair.second.second.size(); j++)
+					{
+						lua_pushinteger(L, j + 1);
+						pair.second.second[j](L, *(addr++));
+						lua_settable(L, i);
+					}
 				}
 			}
 
@@ -278,17 +284,109 @@ int __call(lua_State *L)
 	return 0;
 }
 
+int __call_fast(lua_State *L)
+{
+	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
+	auto native = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
+	if(native)
+	{
+		int errorcode;
+		cell result;
+		bool castresult = false;
+
+		{
+			cell *params = reinterpret_cast<cell*>(alloca(sizeof(cell) * (1 + lua_gettop(L))));
+			cell *end = params + (1 + lua_gettop(L));
+
+			int paramcount = 0;
+			for(int i = lua_gettop(L); i >= 1; i--)
+			{
+				cell value = 0;
+			
+				if(lua_isinteger(L, i))
+				{
+					auto num = lua_tointeger(L, i);
+					if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+					{
+						return lua::argerror(L, i, "%I cannot be stored in a single cell", num);
+					}
+					value = (cell)num;
+				}else if(lua::isnumber(L, i))
+				{
+					float num = (float)lua_tonumber(L, i);
+					value = amx_ftoc(num);
+				}else if(lua_isboolean(L, i))
+				{
+					value = lua_toboolean(L, i);
+				}else if(i == 1 && lua_isfunction(L, i))
+				{
+					castresult = true;
+					continue;
+				}else if(lua_islightuserdata(L, i))
+				{
+					value = reinterpret_cast<cell>(lua_touserdata(L, i));
+				}else{
+					if(lua_isnil(L, i) && paramcount == 0)
+					{
+						continue;
+					}
+					return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
+				}
+
+				*(--end) = value;
+			}
+
+			*(--end) = paramcount * sizeof(cell);
+
+			amx->error = 0;
+
+			{
+				lua::jumpguard guard(L);
+				result = native(amx, end);
+			}
+
+			errorcode = amx->error;
+		}
+
+		if(errorcode)
+		{
+			return lua::amx_error(L, errorcode, result);
+		}
+
+		if(lua::numresults(L) != 0)
+		{
+			if(castresult)
+			{
+				lua_settop(L, 1);
+			}
+			lua_pushlightuserdata(L, reinterpret_cast<void*>(result));
+			if(castresult)
+			{
+				return lua::tailcall(L, 1);
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int getnative(lua_State *L)
 {
 	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
 	auto name = luaL_checkstring(L, 1);
+	bool fast = luaL_opt(L, lua::checkboolean, 2, false);
 	auto it = info->natives.find(name);
 	if(it != info->natives.end())
 	{
-		lua_pushvalue(L, lua_upvalueindex(1));
+		lua_pushlightuserdata(L, info->amx);
 		lua_pushlightuserdata(L, reinterpret_cast<void*>(it->second));
-		lua_pushvalue(L, lua_upvalueindex(2));
-		lua_pushcclosure(L, __call, 3);
+		if(fast)
+		{
+			lua_pushcclosure(L, __call_fast, 2);
+		}else{
+			lua_pushvalue(L, lua_upvalueindex(2));
+			lua_pushcclosure(L, __call, 3);
+		}
 		return 1;
 	}
 	lua_pushnil(L);
