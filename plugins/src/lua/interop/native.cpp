@@ -156,7 +156,7 @@ int __call(lua_State *L)
 					auto addr = reinterpret_cast<cell*>(data + amx->hea);
 					if(!restorers)
 					{
-						restorers = std::make_unique< std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>>();
+						restorers = std::unique_ptr<std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>>(new std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>());
 					}
 					auto &pair = (*restorers)[i];
 					pair.first = addr;
