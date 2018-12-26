@@ -54,7 +54,7 @@ AMX *amx::LoadNew(const char *name, int32_t heapspace, uint16_t namelength, std:
 	hdr.magic = AMX_MAGIC;
 	hdr.file_version = 7;
 	hdr.amx_version = MIN_AMX_VERSION;
-	hdr.dat = hdr.hea = hdr.size = sizeof(hdr);
+	hdr.cod = hdr.dat = hdr.hea = hdr.size = sizeof(hdr);
 	hdr.stp = hdr.hea + heapspace;
 	hdr.defsize = sizeof(AMX_FUNCSTUBNT);
 	hdr.nametable = reinterpret_cast<unsigned char*>(&hdr.namelength) - reinterpret_cast<unsigned char*>(&hdr);
