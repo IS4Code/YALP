@@ -266,7 +266,7 @@ static cell AMX_NATIVE_CALL n_lua_tostring(AMX *amx, cell *params)
 	cell *addr;
 	amx_GetAddr(amx, params[3], &addr);
 
-	amx_SetString(addr, str, true, false, params[4]);
+	amx_SetString(addr, str, optparam(5, 0), false, params[4]);
 
 	if(pop)
 	{

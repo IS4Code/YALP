@@ -38,7 +38,7 @@ native lua_load(Lua:L, const reader[], data, bufsize=-1, chunkname[]="");
 native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 native lua_call(Lua:L, nargs, nresults);
 native lua_stackdump(Lua:L, depth=-1);
-native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer));
+native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer), bool:pack=false);
 native lua_bind(Lua:L);
 native lua_pushpfunction(Lua:L, const f[]);
 
