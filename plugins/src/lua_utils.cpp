@@ -1,5 +1,5 @@
 #include "lua_utils.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 #include "sdk/amx/amx.h"
 #include "lua/lstate.h"
 

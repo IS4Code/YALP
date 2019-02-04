@@ -1,7 +1,6 @@
 #include "native.h"
 #include "lua_utils.h"
-#include "amxutils.h"
-#include "fileutils.h"
+#include "amx/amxutils.h"
 
 #include <unordered_map>
 #include <unordered_set>

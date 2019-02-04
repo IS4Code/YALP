@@ -1,6 +1,6 @@
 #include "sleep.h"
 #include "lua_utils.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 
 #include <cstdlib>
 

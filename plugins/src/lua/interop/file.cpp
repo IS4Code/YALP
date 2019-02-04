@@ -1,6 +1,6 @@
 #include "file.h"
 #include "lua_utils.h"
-#include "fileutils.h"
+#include "amx/fileutils.h"
 #include "native.h"
 
 template <bool DestroyOriginal>
@@ -19,18 +19,21 @@ int asfile(lua_State *L)
 	}
 	int mtindex = lua_absindex(L, -1);
 
+	FILE *f;
 #ifdef _WIN32
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
-	auto fseek = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
-	FILE *f = lua::marshal_file(L, reinterpret_cast<cell>(ptr), amx, fseek);
+	if(!amx::FileLoad(reinterpret_cast<cell>(ptr), amx, f))
 #else
-	FILE *f = lua::marshal_file(L, reinterpret_cast<cell>(ptr), nullptr, nullptr);
+	if(!amx::CellToFile(reinterpret_cast<cell>(ptr), nullptr, f))
 #endif
+	{
+		return lua::argerror(L, 1, "invalid file handle");
+	}
 
 	if(DestroyOriginal)
 	{
 #ifdef _WIN32
-		auto fclose = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(3)));
+		auto fclose = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
 		cell params[] = {sizeof(cell), reinterpret_cast<cell>(ptr)};
 
 		fclose(amx, params);
@@ -64,10 +67,9 @@ int tofile(lua_State *L)
 	auto &file = lua::touserdata<luaL_Stream>(L, 1);
 #ifdef _WIN32
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
-	auto ftemp = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
-	cell value = lua::marshal_file(L, file.f, amx, ftemp);
+	cell value = amx::FileStore(file.f, amx);
 #else
-	cell value = lua::marshal_file(L, file.f, nullptr, nullptr);
+	cell value = amx::FileToCell(file.f, nullptr);
 #endif
 	if(value == 0)
 	{
@@ -103,14 +105,12 @@ void lua::interop::init_file(lua_State *L, AMX *amx)
 	auto ftemp = reinterpret_cast<void*>(find_native(amx, "ftemp"));
 
 	lua_pushlightuserdata(L, amx);
-	lua_pushlightuserdata(L, fseek);
 	lua_pushlightuserdata(L, fclose);
-	lua_pushcclosure(L, asfile<true>, 3);
+	lua_pushcclosure(L, asfile<true>, 2);
 	lua_setfield(L, table, "asfile");
 
 	lua_pushlightuserdata(L, amx);
-	lua_pushlightuserdata(L, fseek);
-	lua_pushcclosure(L, asfile<false>, 2);
+	lua_pushcclosure(L, asfile<false>, 1);
 	lua_setfield(L, table, "asnewfile");
 
 	lua_pushlightuserdata(L, amx);
@@ -119,8 +119,7 @@ void lua::interop::init_file(lua_State *L, AMX *amx)
 	lua_setfield(L, table, "closefile");
 
 	lua_pushlightuserdata(L, amx);
-	lua_pushlightuserdata(L, ftemp);
-	lua_pushcclosure(L, tofile, 2);
+	lua_pushcclosure(L, tofile, 1);
 	lua_setfield(L, table, "tofile");
 #else
 	lua_pushcfunction(L, asfile<true>);

@@ -1,6 +1,6 @@
 #include "memory.h"
 #include "lua_utils.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 
 #include <memory>
 #include <vector>

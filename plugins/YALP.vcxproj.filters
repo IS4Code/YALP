@@ -19,9 +19,6 @@
     <ClCompile Include="src\lua_api.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\amxutils.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\lua_utils.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -163,11 +160,14 @@
     <ClCompile Include="src\lua_adapt.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileutils.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\lua\interop\file.cpp">
       <Filter>src\lua\interop</Filter>
+    </ClCompile>
+    <ClCompile Include="src\amx\fileutils.cpp">
+      <Filter>src\amx</Filter>
+    </ClCompile>
+    <ClCompile Include="src\amx\amxutils.cpp">
+      <Filter>src\amx</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -229,9 +229,6 @@
       <Filter>src\utils</Filter>
     </ClInclude>
     <ClInclude Include="src\lua_api.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\amxutils.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\lua_utils.h">
@@ -357,11 +354,14 @@
     <ClInclude Include="src\lua_adapt.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileutils.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\lua\interop\file.h">
       <Filter>src\lua\interop</Filter>
+    </ClInclude>
+    <ClInclude Include="src\amx\fileutils.h">
+      <Filter>src\amx</Filter>
+    </ClInclude>
+    <ClInclude Include="src\amx\amxutils.h">
+      <Filter>src\amx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 #include "lua/interop/pubvar.h"
 #include "lua/interop/tags.h"
 #include "amx/loader.h"
+#include "amx/fileutils.h"
 
 #include "sdk/amx/amx.h"
 #include "sdk/plugincommon.h"
@@ -102,6 +103,7 @@ namespace hooks
 	{
 		int ret = orig(amx, nativelist, number);
 		lua::interop::amx_register_natives(amx, nativelist, number);
+		amx::RegisterNatives(amx, nativelist, number);
 		return ret;
 	}
 

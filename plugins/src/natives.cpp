@@ -1,8 +1,9 @@
 #include "natives.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 #include "lua_api.h"
 #include "lua_utils.h"
 #include "lua_adapt.h"
+#include "amx/fileutils.h"
 
 #include <string>
 #include <iomanip>
@@ -10,6 +11,9 @@
 #include <cctype>
 #include <cstring>
 #include <sstream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 // native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
 static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
@@ -328,7 +332,7 @@ static cell AMX_NATIVE_CALL n_lua_pushpfunction(AMX *amx, cell *params)
 	char *name;
 	amx_StrParam(amx, params[2], name);
 
-	lua::pushuserdata(L, std::weak_ptr<AMX*>(amx::GetHandle(amx)));
+	lua::pushuserdata(L, std::weak_ptr<amx::Instance>(amx::GetHandle(amx)));
 	lua_pushstring(L, name);
 
 	lua_pushcclosure(L, [](lua_State *L)
@@ -731,6 +735,232 @@ static cell AMX_NATIVE_CALL n_lua_pushfstring(AMX *amx, cell *params)
 	return 0;
 }
 
+struct LoadF
+{
+	int n;
+	FILE *f;
+	char buff[BUFSIZ];
+};
+
+
+static const char *getF(lua_State *L, void *ud, size_t *size)
+{
+	LoadF *lf = (LoadF *)ud;
+	if(lf->n > 0)
+	{
+		*size = lf->n;
+		lf->n = 0;
+	}else{
+		if(feof(lf->f)) return NULL;
+		*size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+	}
+	return lf->buff;
+}
+
+static int errfile(lua_State *L, const char *what)
+{
+	const char *serr = strerror(errno);
+	lua_pushfstring(L, "cannot %s: %s", what, serr);
+	return LUA_ERRFILE;
+}
+
+static int skipBOM(LoadF *lf)
+{
+	const char *p = "\xEF\xBB\xBF";
+	int c;
+	lf->n = 0;
+	do{
+		c = getc(lf->f);
+		if(c == EOF || c != *(const unsigned char *)p++) return c;
+		lf->buff[lf->n++] = c;
+	}while(*p != '\0');
+	lf->n = 0;
+	return getc(lf->f);
+}
+
+static int skipcomment(LoadF *lf, int *cp)
+{
+	int c = *cp = skipBOM(lf);
+	if(c == '#')
+	{
+		do{
+			c = getc(lf->f);
+		}while(c != EOF && c != '\n');
+		*cp = getc(lf->f);
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+// native lua_loadstream(Lua:L, File:file, const chunkname[], lua_load_mode:mode=lua_load_text);
+static cell AMX_NATIVE_CALL n_lua_loadstream(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 3)) return 0;
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+
+	const char *chunkname;
+	amx_StrParam(amx, params[3], chunkname);
+
+	const char *mode = nullptr;
+	cell modecell = optparam(4, 3);
+	if((modecell & 3) == 3)
+	{
+		mode = "bt";
+	}else if(modecell & 1)
+	{
+		mode = "t";
+	}else if(modecell & 2)
+	{
+		mode = "b";
+	}
+
+	LoadF lf;
+	if(!amx::FileLoad(params[2], amx, lf.f))
+	{
+		return 0;
+	}
+	int status, readstatus;
+	int c;
+	int top = lua_gettop(L);
+	if(skipcomment(&lf, &c))
+	{
+		lf.buff[lf.n++] = '\n';
+	}
+	if(c != EOF)
+	{
+		lf.buff[lf.n++] = c;
+	}
+	status = lua_load(L, getF, &lf, chunkname, mode);
+	readstatus = ferror(lf.f);
+	fclose(lf.f);
+	if(readstatus)
+	{
+		lua_settop(L, top);
+		return errfile(L, "read");
+	}
+	return status;
+}
+
+class lua_loader_info
+{
+	std::thread thread;
+	std::mutex mutex;
+	std::condition_variable cond;
+	bool done = false;
+
+	std::string buffer;
+	int signal = LUA_YIELD;
+
+	const char *read(lua_State *L, size_t *sz)
+	{
+		{
+			std::unique_lock<std::mutex> lock(mutex);
+			done = true;
+		}
+		cond.notify_all();
+		std::unique_lock<std::mutex> lock(mutex);
+		cond.wait(lock);
+		*sz = buffer.size();
+		return buffer.c_str();
+	}
+
+	static const char *reader(lua_State *L, void *ud, size_t *sz)
+	{
+		return reinterpret_cast<lua_loader_info*>(ud)->read(L, sz);
+	}
+
+	static void load(lua_State *L, lua_loader_info *info, const char *chunkname, const char *mode)
+	{
+		info->signal = lua_load(L, reader, info, chunkname, mode);
+		{
+			std::unique_lock<std::mutex> lock(info->mutex);
+			info->done = true;
+		}
+		info->cond.notify_all();
+	}
+
+public:
+	lua_loader_info(lua_State *L, const char *chunkname, const char *mode)
+	{
+		thread = std::thread(load, L, this, chunkname, mode);
+
+		std::unique_lock<std::mutex> lock(mutex);
+		while(!done)
+		{
+			cond.wait(lock);
+		}
+		done = false;
+	}
+
+	int write(const cell *data, size_t size)
+	{
+		if(size == -1)
+		{
+			int len;
+			amx_StrLen(data, &len);
+			size = len;
+		}
+		buffer.resize(size);
+		if(size > 0)
+		{
+			amx_GetString(&buffer[0], data, false, size + 1);
+		}
+
+		cond.notify_all();
+		{
+			std::unique_lock<std::mutex> lock(mutex);
+			while(!done)
+			{
+				cond.wait(lock);
+			}
+			done = false;
+		}
+		int sig = signal;
+		if(sig != LUA_YIELD)
+		{
+			thread.join();
+			delete this;
+		}
+		return sig;
+	}
+};
+
+// native LuaLoader:lua_loader(Lua:L, const chunkname[], lua_load_mode:mode=lua_load_text);
+static cell AMX_NATIVE_CALL n_lua_loader(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 2)) return 0;
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+
+	const char *chunkname;
+	amx_StrParam(amx, params[2], chunkname);
+
+	const char *mode = nullptr;
+	cell modecell = optparam(3, 3);
+	if((modecell & 3) == 3)
+	{
+		mode = "bt";
+	}else if(modecell & 1)
+	{
+		mode = "t";
+	}else if(modecell & 2)
+	{
+		mode = "b";
+	}
+
+	return reinterpret_cast<cell>(new lua_loader_info(L, chunkname, mode));
+}
+
+// native lua_write(LuaLoader:stream, const data[], size);
+static cell AMX_NATIVE_CALL n_lua_write(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 3)) return 0;
+	auto info = reinterpret_cast<lua_loader_info*>(params[1]);
+	cell *data;
+	amx_GetAddr(amx, params[2], &data);
+	return info->write(data, params[3]);
+}
+
 template <AMX_NATIVE Native>
 static cell AMX_NATIVE_CALL error_wrapper(AMX *amx, cell *params)
 {
@@ -780,6 +1010,9 @@ static AMX_NATIVE_INFO native_list[] =
 	AMX_DECLARE_NATIVE(lua_len),
 	AMX_DECLARE_NATIVE(lua_pushstring),
 	AMX_DECLARE_NATIVE(lua_pushfstring),
+	AMX_DECLARE_NATIVE(lua_loadstream),
+	AMX_DECLARE_NATIVE(lua_loader),
+	AMX_DECLARE_NATIVE(lua_write),
 
 	AMX_DECLARE_LUA_NATIVE(lua_absindex),
 	AMX_DECLARE_LUA_NATIVE(lua_checkstack),

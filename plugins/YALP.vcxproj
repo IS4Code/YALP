@@ -167,9 +167,9 @@
     <ClCompile Include="lib\lua\lzio.cpp" />
     <ClCompile Include="lib\sdk\amxplugin.cpp" />
     <ClCompile Include="lib\subhook\subhook.c" />
-    <ClCompile Include="src\amxutils.cpp" />
+    <ClCompile Include="src\amx\amxutils.cpp" />
+    <ClCompile Include="src\amx\fileutils.cpp" />
     <ClCompile Include="src\amx\loader.cpp" />
-    <ClCompile Include="src\fileutils.cpp" />
     <ClCompile Include="src\hooks.cpp" />
     <ClCompile Include="src\lua\interop.cpp" />
     <ClCompile Include="src\lua\interop\file.cpp" />
@@ -237,9 +237,9 @@
       <FileType>CppCode</FileType>
     </ClInclude>
     <ClCompile Include="src\main.cpp" />
-    <ClInclude Include="src\amxutils.h" />
+    <ClInclude Include="src\amx\amxutils.h" />
+    <ClInclude Include="src\amx\fileutils.h" />
     <ClInclude Include="src\amx\loader.h" />
-    <ClInclude Include="src\fileutils.h" />
     <ClInclude Include="src\fixes\linux.h" />
     <ClInclude Include="src\hooks.h" />
     <ClInclude Include="src\lua\interop.h" />

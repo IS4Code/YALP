@@ -1,7 +1,7 @@
 #include "interop.h"
 #include "lua_utils.h"
 #include "lua_api.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 #include "amx/loader.h"
 #include "interop/native.h"
 #include "interop/public.h"

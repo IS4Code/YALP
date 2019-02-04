@@ -1,6 +1,6 @@
 #include "string.h"
 #include "lua_utils.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 
 int getstring(lua_State *L)
 {

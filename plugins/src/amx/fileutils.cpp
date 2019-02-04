@@ -2,9 +2,11 @@
 #include "lua_utils.h"
 
 #ifdef _WIN32
+#include "amx/amxutils.h"
 #include "subhook/subhook.h"
 #include <io.h>
 #include <thread>
+#include <cstring>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <aclapi.h>
@@ -12,6 +14,19 @@
 #include <unistd.h>
 #endif
 #include <fcntl.h>
+
+#ifdef _WIN32
+struct file_extra : amx::Extra
+{
+	AMX_NATIVE fseek = nullptr;
+	AMX_NATIVE ftemp = nullptr;
+
+	file_extra(AMX *amx) : amx::Extra(amx)
+	{
+
+	}
+};
+#endif
 
 #ifdef _WIN32
 template <class Func>
@@ -48,23 +63,21 @@ DWORD WINAPI HookSetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDist
 }
 #endif
 
-FILE *lua::marshal_file(lua_State *L, cell value, AMX *amx, AMX_NATIVE fseek)
+bool amx::FileLoad(cell value, AMX *amx, FILE *&f)
 {
-	FILE *f;
-
 #ifdef _WIN32
 	auto &info = sfp_info;
 	info.handle = nullptr;
 	{
 		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, info.trampoline);
 		cell params[] = {3 * sizeof(cell), value, 0, 1};
-		fseek(amx, params);
+		amx::GetHandle(amx)->get_extra<file_extra>().fseek(amx, params);
 	}
 
 	HANDLE hfile;
 	if(info.handle == nullptr || !DuplicateHandle(GetCurrentProcess(), info.handle, GetCurrentProcess(), &hfile, 0, TRUE, DUPLICATE_SAME_ACCESS))
 	{
-		return reinterpret_cast<FILE*>(lua::argerror(L, 1, "invalid file handle"));
+		return false;
 	}
 
 	int fd = _open_osfhandle(reinterpret_cast<intptr_t>(hfile), _O_RDWR);
@@ -82,6 +95,7 @@ FILE *lua::marshal_file(lua_State *L, cell value, AMX *amx, AMX_NATIVE fseek)
 	int fd = fileno(reinterpret_cast<FILE*>(value));
 	if(fd == -1)
 	{
+		return false;
 		return reinterpret_cast<FILE*>(lua::argerror(L, 1, "invalid file handle"));
 	}
 	fd = dup(fd);
@@ -97,7 +111,7 @@ FILE *lua::marshal_file(lua_State *L, cell value, AMX *amx, AMX_NATIVE fseek)
 		}
 	}
 #endif
-	return f;
+	return true;
 }
 
 #ifdef _WIN32
@@ -117,7 +131,7 @@ HANDLE WINAPI HookCreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dw
 }
 #endif
 
-cell lua::marshal_file(lua_State *L, FILE *file, AMX *amx, AMX_NATIVE ftemp)
+cell amx::FileStore(FILE *file, AMX *amx)
 {
 	cell value;
 #ifdef _WIN32
@@ -137,9 +151,8 @@ cell lua::marshal_file(lua_State *L, FILE *file, AMX *amx, AMX_NATIVE ftemp)
 	{
 		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA, info.trampoline);
 		cell params[] = {0};
-		value = ftemp(amx, params);
+		value = amx::GetHandle(amx)->get_extra<file_extra>().ftemp(amx, params);
 	}
-	lua_pop(L, 1);
 #else
 	int fd = fileno(file);
 	if(fd == -1)
@@ -161,4 +174,20 @@ cell lua::marshal_file(lua_State *L, FILE *file, AMX *amx, AMX_NATIVE ftemp)
 	}
 #endif
 	return value;
+}
+
+void amx::RegisterNatives(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)
+{
+#ifdef _WIN32
+	for(int i = 0; nativelist[i].name != nullptr && (i < number || number == -1); i++)
+	{
+		if(!std::strcmp(nativelist[i].name, "fseek"))
+		{
+			amx::GetHandle(amx)->get_extra<file_extra>().fseek = nativelist[i].func;
+		}else if(!std::strcmp(nativelist[i].name, "ftemp"))
+		{
+			amx::GetHandle(amx)->get_extra<file_extra>().ftemp = nativelist[i].func;
+		}
+	}
+#endif
 }

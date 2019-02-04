@@ -31,6 +31,12 @@ enum lua_lib (<<= 1)
 const lua_lib:lua_baselibs = lua_lib_base | lua_lib_coroutine | lua_lib_table | lua_lib_string | lua_lib_math;
 const lua_lib:lua_newlibs = lua_lib_interop | lua_lib_timer | lua_lib_remote;
 
+enum lua_load_mode (<<= 1)
+{
+    lua_load_text = 1,
+    lua_load_binary,
+}
+
 native Lua:lua_newstate(lua_lib:load=lua_baselibs, lua_lib:preload=lua_newlibs, memlimit=-1);
 native lua_dostring(Lua:L, const str[]);
 native bool:lua_close(Lua:L);
@@ -41,44 +47,26 @@ native lua_stackdump(Lua:L, depth=-1);
 native lua_tostring(Lua:L, idx, buffer[], size=sizeof(buffer), bool:pack=false);
 native lua_bind(Lua:L);
 native lua_pushpfunction(Lua:L, const f[]);
+native lua_loadstream(Lua:L, File:file, const chunkname[], lua_load_mode:mode=lua_load_text);
+native LuaLoader:lua_loader(Lua:L, const chunkname[], lua_load_mode:mode=lua_load_text);
+native lua_write(LuaLoader:stream, const data[], size=-1);
 
-stock lua_dofile(Lua:L, const name[], bufsize=-1)
+stock lua_dofile(Lua:L, const name[], lua_load_mode:mode=lua_load_text)
 {
-    new err = lua_loadfile(L, name, bufsize);
+    new err = lua_loadfile(L, name, mode);
     if(err) return err;
     return lua_pcall(L, 0, -1, 0);
 }
 
-stock lua_loadfile(Lua:L, const name[], bufsize=-1)
+stock lua_loadfile(Lua:L, const name[], lua_load_mode:mode=lua_load_text)
 {
     new File:file = fopen(name, io_read);
     if(!file) return 7;
     new chunkname[64] = "@";
     strcat(chunkname, name);
-    new err = lua_load(L, #_lua_freader, _:file, bufsize, chunkname);
+    new err = lua_loadstream(L, file, chunkname, mode);
     fclose(file);
     return err;
-}
-
-forward _lua_freader(Lua:L, buffer[], File:file, size);
-public _lua_freader(Lua:L, buffer[], File:file, size)
-{
-    const cellsize = cellbits / 8;
-    size = fblockread(file, buffer, size) * cellsize;
-    if(size == 0)
-    {
-        size = flength(file) % cellsize;
-        if(size != 0)
-        {
-            fseek(file, -size, seek_current);
-            for(new i = 1; i <= size; i++)
-            {
-                buffer{cellsize - i} = fgetchar(file, 0, false);
-            }
-            return -size;
-        }
-    }
-    return size;
 }
 
 native lua_tointeger(Lua:L, idx);

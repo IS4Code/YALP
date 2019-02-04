@@ -1,11 +1,12 @@
 #include "main.h"
 #include "hooks.h"
 #include "natives.h"
-#include "amxutils.h"
+#include "amx/amxutils.h"
 #include "lua_api.h"
 #include "lua/interop.h"
 #include "lua/timer.h"
 #include "lua/remote.h"
+#include "amx/fileutils.h"
 
 #include "sdk/amx/amx.h"
 #include "sdk/plugincommon.h"
