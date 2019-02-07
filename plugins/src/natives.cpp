@@ -59,7 +59,7 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 	return reinterpret_cast<cell>(L);
 }
 
-// native lua_dostring(Lua:L, const str[]);
+// native bool:lua_dostring(Lua:L, const str[]);
 static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 {
 	if(!lua::check_params(amx, params, 2)) return 0;
@@ -87,7 +87,7 @@ static cell AMX_NATIVE_CALL n_lua_close(AMX *amx, cell *params)
 	return 1;
 }
 
-// native lua_pcall(Lua:L, nargs, nresults, errfunc=0);
+// native lua_status:lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 static cell AMX_NATIVE_CALL n_lua_pcall(AMX *amx, cell *params)
 {
 	if(!lua::check_params(amx, params, 3)) return 0;
@@ -117,10 +117,10 @@ static cell AMX_NATIVE_CALL n_lua_call(AMX *amx, cell *params)
 			amx_RaiseError(amx, AMX_ERR_GENERAL);
 			break;
 	}
-	return 0;
+	return 1;
 }
 
-// native lua_load(Lua:L, const reader[], data, bufsize, chunkname[]="");
+// native lua_status:lua_load(Lua:L, const reader[], data, bufsize, chunkname[]="");
 static cell AMX_NATIVE_CALL n_lua_load(AMX *amx, cell *params)
 {
 	if(!lua::check_params(amx, params, 4)) return 0;
@@ -222,7 +222,7 @@ static cell AMX_NATIVE_CALL n_lua_stackdump(AMX *amx, cell *params)
 		}
 	}
 	lua_pop(L, 1);
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_loopback(AMX *amx, cell *params)
@@ -300,7 +300,7 @@ static cell AMX_NATIVE_CALL n_lua_pop(AMX *amx, cell *params)
 	if(!lua::check_params(amx, params, 2)) return 0;
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	lua_pop(L, params[2]);
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_bind(AMX *amx, cell *params)
@@ -363,7 +363,7 @@ static cell AMX_NATIVE_CALL n_lua_pushpfunction(AMX *amx, cell *params)
 		}
 	}, 2);
 
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_gettable(AMX *amx, cell *params)
@@ -459,7 +459,7 @@ static cell AMX_NATIVE_CALL n_lua_settable(AMX *amx, cell *params)
 			amx_RaiseError(amx, AMX_ERR_GENERAL);
 			break;
 	}
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
@@ -484,7 +484,7 @@ static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
 			amx_RaiseError(amx, AMX_ERR_GENERAL);
 			break;
 	}
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
@@ -512,7 +512,7 @@ static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
 			amx_RaiseError(amx, AMX_ERR_GENERAL);
 			break;
 	}
-	return 0;
+	return 1;
 }
 
 static cell AMX_NATIVE_CALL n_lua_len(AMX *amx, cell *params)
@@ -549,7 +549,7 @@ static cell AMX_NATIVE_CALL n_lua_pushstring(AMX *amx, cell *params)
 	amx_StrParam(amx, params[2], str);
 
 	lua_pushstring(L, str);
-	return 0;
+	return 1;
 }
 
 void add_query(std::string &buf, const cell *arg)
@@ -732,7 +732,7 @@ static cell AMX_NATIVE_CALL n_lua_pushfstring(AMX *amx, cell *params)
 	buf.append(fmt, c - fmt);
 
 	lua_pushlstring(L, &buf[0], buf.size());
-	return 0;
+	return 1;
 }
 
 struct LoadF
@@ -793,7 +793,7 @@ static int skipcomment(LoadF *lf, int *cp)
 	}
 }
 
-// native lua_loadstream(Lua:L, File:file, const chunkname[], lua_load_mode:mode=lua_load_text);
+// native lua_status:lua_loadstream(Lua:L, File:file, const chunkname[], lua_load_mode:mode=lua_load_text);
 static cell AMX_NATIVE_CALL n_lua_loadstream(AMX *amx, cell *params)
 {
 	if(!lua::check_params(amx, params, 3)) return 0;
@@ -959,7 +959,7 @@ static cell AMX_NATIVE_CALL n_lua_loader(AMX *amx, cell *params)
 	return reinterpret_cast<cell>(new lua_loader_info(L, chunkname, mode));
 }
 
-// native lua_write(LuaLoader:stream, const data[], size);
+// native lua_status:lua_write(LuaLoader:stream, const data[], size);
 static cell AMX_NATIVE_CALL n_lua_write(AMX *amx, cell *params)
 {
 	if(!lua::check_params(amx, params, 3)) return 0;
@@ -967,6 +967,51 @@ static cell AMX_NATIVE_CALL n_lua_write(AMX *amx, cell *params)
 	cell *data;
 	amx_GetAddr(amx, params[2], &data);
 	return info->write(data, params[3]);
+}
+
+// native Pointer:lua_pushuserdata(Lua:L, const data[], size=sizeof(data));
+static cell AMX_NATIVE_CALL n_lua_pushuserdata(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 3)) return 0;
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	size_t size = params[3] * sizeof(cell);
+	auto ptr = lua_newuserdata(L, size);
+	cell *addr;
+	amx_GetAddr(amx, params[2], &addr);
+	std::memcpy(ptr, addr, size);
+	return reinterpret_cast<cell>(ptr);
+}
+
+// native lua_getuserdata(Lua:L, idx, data[], size=sizeof(data));
+static cell AMX_NATIVE_CALL n_lua_getuserdata(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 4)) return 0;
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	size_t size = params[4] * sizeof(cell);
+	auto ptr = lua_touserdata(L, params[2]);
+	if(!ptr) return 0;
+	cell *addr;
+	amx_GetAddr(amx, params[3], &addr);
+	size_t objlen = lua_rawlen(L, params[2]);
+	if(objlen > size) objlen = size;
+	std::memcpy(addr, ptr, objlen);
+	return (objlen + sizeof(cell) - 1) / sizeof(cell);
+}
+
+// native lua_setuserdata(Lua:L, idx, const data[], size=sizeof(data));
+static cell AMX_NATIVE_CALL n_lua_setuserdata(AMX *amx, cell *params)
+{
+	if(!lua::check_params(amx, params, 4)) return 0;
+	auto L = reinterpret_cast<lua_State*>(params[1]);
+	size_t size = params[4] * sizeof(cell);
+	auto ptr = lua_touserdata(L, params[2]);
+	if(!ptr) return 0;
+	cell *addr;
+	amx_GetAddr(amx, params[3], &addr);
+	size_t objlen = lua_rawlen(L, params[2]);
+	if(objlen < size) size = objlen;
+	std::memcpy(ptr, addr, size);
+	return (size + sizeof(cell) - 1) / sizeof(cell);
 }
 
 template <AMX_NATIVE Native>
@@ -1021,9 +1066,14 @@ static AMX_NATIVE_INFO native_list[] =
 	AMX_DECLARE_NATIVE(lua_loadstream),
 	AMX_DECLARE_NATIVE(lua_loader),
 	AMX_DECLARE_NATIVE(lua_write),
+	AMX_DECLARE_NATIVE(lua_pushuserdata),
+	AMX_DECLARE_NATIVE(lua_getuserdata),
+	AMX_DECLARE_NATIVE(lua_setuserdata),
 
 	AMX_DECLARE_LUA_NATIVE(lua_absindex),
+	AMX_DECLARE_LUA_NATIVE(lua_arith),
 	AMX_DECLARE_LUA_NATIVE(lua_checkstack),
+	AMX_DECLARE_LUA_NATIVE(lua_compare),
 	AMX_DECLARE_LUA_NATIVE(lua_copy),
 	AMX_DECLARE_LUA_NATIVE(lua_createtable),
 	AMX_DECLARE_LUA_NATIVE(lua_gc),

@@ -246,6 +246,29 @@ namespace lua
 			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3])));
 		}
 	};
+
+	template <class Arg1, class Arg2, class Arg3, void(*Func)(lua_State *L, Arg1, Arg2, Arg3)>
+	struct adapt<void(*)(lua_State *L, Arg1, Arg2, Arg3), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			if(!check_params(amx, params, 4)) return 0;
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3]), adapt_arg<Arg3>::convert(params[4]));
+			return 0;
+		}
+	};
+
+	template <class Return, class Arg1, class Arg2, class Arg3, Return(*Func)(lua_State *L, Arg1, Arg2, Arg3)>
+	struct adapt<Return(*)(lua_State *L, Arg1, Arg2, Arg3), Func>
+	{
+		static cell AMX_NATIVE_CALL native(AMX *amx, cell *params)
+		{
+			if(!check_params(amx, params, 4)) return 0;
+			auto L = reinterpret_cast<lua_State*>(params[1]);
+			return adapt_return<Return>::convert(Func(L, adapt_arg<Arg1>::convert(params[2]), adapt_arg<Arg2>::convert(params[3]), adapt_arg<Arg3>::convert(params[4])));
+		}
+	};
 }
 
 #endif
