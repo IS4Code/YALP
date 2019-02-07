@@ -900,11 +900,19 @@ public:
 			int len;
 			amx_StrLen(data, &len);
 			size = len;
-		}
-		buffer.resize(size);
-		if(size > 0)
-		{
-			amx_GetString(&buffer[0], data, false, size + 1);
+			buffer.resize(size);
+			if(size > 0)
+			{
+				amx_GetString(&buffer[0], data, false, size + 1);
+			}
+		}else{
+			buffer.resize(size);
+			char *str = &buffer[0];
+			while(size > 0)
+			{
+				*str++ = (unsigned char)(ucell)(*data++);
+				size--;
+			}
 		}
 
 		cond.notify_all();
