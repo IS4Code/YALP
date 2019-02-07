@@ -52,6 +52,7 @@ const lua_status:LUA_ERRSYNTAX = lua_status:3;
 const lua_status:LUA_ERRMEM = lua_status:4;
 const lua_status:LUA_ERRGCMM = lua_status:5;
 const lua_status:LUA_ERRERR = lua_status:6;
+const lua_status:LUA_ERRFILE = lua_status:7;
 
 native lua_status:lua_pcall(Lua:L, nargs, nresults, errfunc=0);
 native lua_call(Lua:L, nargs, nresults);
@@ -66,7 +67,7 @@ native lua_status:lua_write(LuaLoader:stream, const data[], size=-1);
 stock lua_status:lua_loadfile(Lua:L, const name[], lua_load_mode:mode=lua_load_text)
 {
     new File:file = fopen(name, io_read);
-    if(!file) return 7;
+    if(!file) return LUA_ERRFILE;
     new chunkname[64] = "@";
     strcat(chunkname, name);
     new lua_status:err = lua_loadstream(L, file, chunkname, mode);
