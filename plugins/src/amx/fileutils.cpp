@@ -96,7 +96,6 @@ bool amx::FileLoad(cell value, AMX *amx, FILE *&f)
 	if(fd == -1)
 	{
 		return false;
-		return reinterpret_cast<FILE*>(lua::argerror(L, 1, "invalid file handle"));
 	}
 	fd = dup(fd);
 
