@@ -1,4 +1,4 @@
-/** YALP v0.4 by IllidanS4 **/
+/** YALP v0.5 by IllidanS4 **/
 //github.com/IllidanS4/YALP
 
 #if defined _inc_YALP
