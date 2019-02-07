@@ -24,7 +24,7 @@ int asfile(lua_State *L)
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	if(!amx::FileLoad(reinterpret_cast<cell>(ptr), amx, f))
 #else
-	if(!amx::CellToFile(reinterpret_cast<cell>(ptr), nullptr, f))
+	if(!amx::FileLoad(reinterpret_cast<cell>(ptr), nullptr, f))
 #endif
 	{
 		return lua::argerror(L, 1, "invalid file handle");
@@ -69,7 +69,7 @@ int tofile(lua_State *L)
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	cell value = amx::FileStore(file.f, amx);
 #else
-	cell value = amx::FileToCell(file.f, nullptr);
+	cell value = amx::FileStore(file.f, nullptr);
 #endif
 	if(value == 0)
 	{
