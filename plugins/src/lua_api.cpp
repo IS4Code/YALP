@@ -411,6 +411,26 @@ static int exit(lua_State *L)
 	return 0;
 }
 
+static int array(lua_State *L)
+{
+	int top = lua_gettop(L);
+	if(top == 0)
+	{
+		lua_createtable(L, 0, 1);
+	}else{
+		lua_createtable(L, top - 1, 2);
+	}
+	lua_insert(L, 1);
+	lua_pushinteger(L, top);
+	lua_setfield(L, 1, "n");
+	while(top > 0)
+	{
+		lua_seti(L, 1, top - 1);
+		top--;
+	}
+	return 1;
+}
+
 static int open_package(lua_State *L)
 {
 	luaopen_package(L);
@@ -468,6 +488,9 @@ static int open_base(lua_State *L)
 
 	lua_pushcfunction(L, exit);
 	lua_setfield(L, -2, "exit");
+
+	lua_pushcfunction(L, array);
+	lua_setfield(L, -2, "array");
 
 	open_package(L);
 	lua_pop(L, 1);
