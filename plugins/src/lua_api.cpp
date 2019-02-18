@@ -449,7 +449,7 @@ static int open_base(lua_State *L)
 {
 	luaopen_base(L);
 
-	lua::pushliteral(L, "YALP 0.2");
+	lua::pushliteral(L, "YALP 1.0");
 	lua_setfield(L, -2, "YALP_VERSION");
 
 	lua_pushcfunction(L, custom_print);
