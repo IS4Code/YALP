@@ -1,48 +1,48 @@
 #include "result.h"
 #include "lua_utils.h"
 
-int asnone(lua_State *L)
+static int asnone(lua_State *L)
 {
 	lua::checklightudata(L, 1);
 	return 0;
 }
 
-int asnil(lua_State *L)
+static int asnil(lua_State *L)
 {
 	lua::checklightudata(L, 1);
 	lua_pushnil(L);
 	return 1;
 }
 
-int asinteger(lua_State *L)
+static int asinteger(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	lua_pushinteger(L, reinterpret_cast<cell>(ptr));
 	return 1;
 }
 
-int asuinteger(lua_State *L)
+static int asuinteger(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	lua_pushinteger(L, reinterpret_cast<ucell>(ptr));
 	return 1;
 }
 
-int asboolean(lua_State *L)
+static int asboolean(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	lua_pushboolean(L, !!ptr);
 	return 1;
 }
 
-int asfloat(lua_State *L)
+static int asfloat(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	lua_pushnumber(L, amx_ctof(reinterpret_cast<cell&>(ptr)));
 	return 1;
 }
 
-int asoffset(lua_State *L)
+static int asoffset(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	size_t ofs = reinterpret_cast<size_t>(ptr);
@@ -54,7 +54,7 @@ int asoffset(lua_State *L)
 	return 1;
 }
 
-int ashandle(lua_State *L)
+static int ashandle(lua_State *L)
 {
 	auto ptr = lua::checklightudata(L, 1);
 	if(!ptr)
