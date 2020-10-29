@@ -40,8 +40,18 @@ class subhook_guard<Ret(__stdcall)(Args...)>
 
 	subhook_t hook;
 
+	static void *traverse(void *src)
+	{
+		auto dst = subhook_read_dst(src);
+		if(dst != nullptr)
+		{
+			return traverse(dst); // something else is already hooking this function
+		}
+		return src;
+	}
+
 public:
-	subhook_guard(func_type *src, func_type *dst) : hook(subhook_new(reinterpret_cast<void*>(src), reinterpret_cast<void*>(dst), {}))
+	subhook_guard(func_type *src, func_type *dst) : hook(subhook_new(traverse(reinterpret_cast<void*>(src)), reinterpret_cast<void*>(dst), {}))
 	{
 		subhook_install(hook);
 	}
