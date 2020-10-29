@@ -4,6 +4,7 @@
 #ifdef _WIN32
 #include "amx/amxutils.h"
 #include "subhook/subhook.h"
+#include "subhook/subhook_private.h"
 #include <io.h>
 #include <thread>
 #include <cstring>
@@ -30,15 +31,49 @@ struct file_extra : amx::Extra
 
 #ifdef _WIN32
 template <class Func>
-class subhook_guard
+class subhook_guard;
+
+template <class Ret, class... Args>
+class subhook_guard<Ret(__stdcall)(Args...)>
 {
+	typedef Ret(__stdcall func_type)(Args...);
+
 	subhook_t hook;
 
 public:
-	subhook_guard(Func *src, Func *dst, Func *&trampoline) : hook(subhook_new(reinterpret_cast<void*>(src), reinterpret_cast<void*>(dst), {}))
+	subhook_guard(func_type *src, func_type *dst) : hook(subhook_new(reinterpret_cast<void*>(src), reinterpret_cast<void*>(dst), {}))
 	{
-		trampoline = reinterpret_cast<Func*>(subhook_get_trampoline(hook));
 		subhook_install(hook);
+	}
+
+	Ret trampoline(Args...args)
+	{
+		auto ptr = subhook_get_trampoline(hook);
+		if(ptr)
+		{
+			return reinterpret_cast<func_type*>(ptr)(std::forward<Args>(args)...);
+		}
+		
+		auto src = subhook_get_src(hook);
+		auto dst = subhook_read_dst(src);
+		auto olddst = subhook_get_dst(hook);
+		if(dst != olddst)
+		{
+			hook->dst = dst;
+			subhook_remove(hook);
+			auto ret = reinterpret_cast<func_type*>(src)(std::forward<Args>(args)...);
+			subhook_install(hook);
+			hook->dst = olddst;
+			return ret;
+		}else if(!dst)
+		{
+			return reinterpret_cast<func_type*>(src)(std::forward<Args>(args)...);
+		}else{
+			subhook_remove(hook);
+			auto ret = reinterpret_cast<func_type*>(src)(std::forward<Args>(args)...);
+			subhook_install(hook);
+			return ret;
+		}
 	}
 
 	~subhook_guard()
@@ -47,11 +82,9 @@ public:
 		subhook_free(hook);
 	}
 };
-#endif
 
-#ifdef _WIN32
 static thread_local struct {
-	decltype(&SetFilePointer) trampoline;
+	subhook_guard<decltype(SetFilePointer)> *hook;
 	HANDLE handle;
 } sfp_info;
 
@@ -59,7 +92,7 @@ DWORD WINAPI HookSetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDist
 {
 	auto &info = sfp_info;
 	info.handle = hFile;
-	return info.trampoline(hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
+	return info.hook->trampoline(hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod);
 }
 #endif
 
@@ -69,7 +102,8 @@ bool amx::FileLoad(cell value, AMX *amx, FILE *&f)
 	auto &info = sfp_info;
 	info.handle = nullptr;
 	{
-		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer, info.trampoline);
+		subhook_guard<decltype(SetFilePointer)> guard(&SetFilePointer, &HookSetFilePointer);
+		info.hook = &guard;
 		cell params[] = {3 * sizeof(cell), value, 0, 1};
 		amx::GetHandle(amx)->get_extra<file_extra>().fseek(amx, params);
 	}
@@ -115,7 +149,7 @@ bool amx::FileLoad(cell value, AMX *amx, FILE *&f)
 
 #ifdef _WIN32
 static thread_local struct {
-	decltype(&CreateFileA) trampoline;
+	subhook_guard<decltype(CreateFileA)> *hook;
 	HANDLE handle;
 } cf_info;
 
@@ -126,7 +160,7 @@ HANDLE WINAPI HookCreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dw
 	{
 		return info.handle;
 	}
-	return info.trampoline(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	return info.hook->trampoline(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 #endif
 
@@ -148,7 +182,8 @@ cell amx::FileStore(FILE *file, AMX *amx)
 	auto &info = cf_info;
 	info.handle = hfile;
 	{
-		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA, info.trampoline);
+		subhook_guard<decltype(CreateFileA)> guard(&CreateFileA, &HookCreateFileA);
+		info.hook = &guard;
 		cell params[] = {0};
 		value = amx::GetHandle(amx)->get_extra<file_extra>().ftemp(amx, params);
 	}
