@@ -28,7 +28,7 @@ PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData)
 
 	hooks::load();
 
-	logprintf(" YALP v1.0 loaded");
+	logprintf(" YALP v1.1 loaded");
 	logprintf(" Created by IllidanS4");
 	return true;
 }
@@ -39,7 +39,7 @@ PLUGIN_EXPORT void PLUGIN_CALL Unload()
 	lua::remote::close();
 	hooks::unload();
 
-	logprintf(" YALP v1.0 unloaded");
+	logprintf(" YALP v1.1 unloaded");
 }
 
 PLUGIN_EXPORT int PLUGIN_CALL AmxLoad(AMX *amx) 

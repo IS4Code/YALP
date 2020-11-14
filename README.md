@@ -1,4 +1,4 @@
-YALP v1.0
+YALP v1.1
 ==========
 
 _YALP_, short for _Yet Another Lua Plugin_, aims to be a simple yet extendable SA-MP plugin allowing to use [Lua](https://www.lua.org/) for SA-MP server programming.
