@@ -445,6 +445,41 @@ static int marshal(lua_State *L)
 	return paramcount;
 }
 
+static int numnatives(lua_State *L)
+{
+	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
+	lua_pushinteger(L, info->natives.size());
+	return 1;
+}
+
+static int nativenames(lua_State *L)
+{
+	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
+	auto pair = std::make_pair(info->natives.begin(), info->natives.end());
+	using pair_type = decltype(pair);
+	if(pair.first == pair.second)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+	lua::pushuserdata(L, std::move(pair));
+	lua_pushcclosure(L, [](lua_State *L)
+	{
+		auto &pair = lua::touserdata<pair_type>(L, lua_upvalueindex(1));
+		if(pair.first == pair.second)
+		{
+			pair_type().swap(pair);
+			lua_pushnil(L);
+			return 1;
+		}
+		const auto &name = pair.first->first;
+		lua_pushlstring(L, name.data(), name.size());
+		++pair.first;
+		return 1;
+	}, 1);
+	return 1;
+}
+
 void lua::interop::init_native(lua_State *L, AMX *amx)
 {
 	int table = lua_absindex(L, -1);
@@ -459,6 +494,15 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 	lua_createtable(L, 0, 1);
 
 	lua::pushuserdata(L, it->second);
+
+	lua_pushvalue(L, -1);
+	lua_pushcclosure(L, numnatives, 1);
+	lua_setfield(L, table, "numnatives");
+
+	lua_pushvalue(L, -1);
+	lua_pushcclosure(L, nativenames, 1);
+	lua_setfield(L, table, "nativenames");
+
 	lua_getfield(L, table, "sleep");
 	lua_pushnil(L);
 	lua_pushcclosure(L, getnative, 3);
