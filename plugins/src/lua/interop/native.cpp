@@ -48,7 +48,30 @@ public:
 	}
 };
 
-int __call(lua_State *L)
+inline bool marshal_value_simple(lua_State *L, int i, cell &value)
+{
+	if(lua_isinteger(L, i))
+	{
+		auto num = lua_tointeger(L, i);
+		if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+		{
+			return lua::argerror(L, i, "%I cannot be stored in a single cell", num);
+		}
+		value = (cell)num;
+	}else if(lua::isnumber(L, i))
+	{
+		float num = (float)lua_tonumber(L, i);
+		value = amx_ftoc(num);
+	}else if(lua_isboolean(L, i))
+	{
+		value = lua_toboolean(L, i);
+	}else{
+		return false;
+	}
+	return true;
+}
+
+static int __call(lua_State *L)
 {
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	auto native = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
@@ -77,133 +100,121 @@ int __call(lua_State *L)
 
 				cell value = 0;
 			
-				if(lua_isinteger(L, i))
+				if(!marshal_value_simple(L, i, value))
 				{
-					auto num = lua_tointeger(L, i);
-					if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+					if(lua::isstring(L, i))
 					{
-						return lua::argerror(L, i, "%I cannot be stored in a single cell", num);
-					}
-					value = (cell)num;
-				}else if(lua::isnumber(L, i))
-				{
-					float num = (float)lua_tonumber(L, i);
-					value = amx_ftoc(num);
-				}else if(lua_isboolean(L, i))
-				{
-					value = lua_toboolean(L, i);
-				}else if(lua::isstring(L, i))
-				{
-					size_t len;
-					auto str = lua_tolstring(L, i, &len);
-					auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
+						size_t len;
+						auto str = lua_tolstring(L, i, &len);
+						auto dlen = ((len + sizeof(cell)) / sizeof(cell)) * sizeof(cell);
 
-					if(!amx::MemCheck(amx, len * sizeof(cell)))
-					{
-						return lua::amx_error(L, AMX_ERR_MEMORY);
-					}
-
-					value = amx->hea;
-					auto addr = reinterpret_cast<cell*>(data + amx->hea);
-					amx::SetString(addr, str, len, true);
-					amx->hea += dlen;
-				}else if(i == 1 && lua_isfunction(L, i))
-				{
-					castresult = true;
-					continue;
-				}else if(auto buf = lua::tobuffer(L, i, len, isconst))
-				{
-					if(isconst)
-					{
-						if(!amx::MemCheck(amx, len))
+						if(!amx::MemCheck(amx, len * sizeof(cell)))
 						{
 							return lua::amx_error(L, AMX_ERR_MEMORY);
 						}
+
 						value = amx->hea;
-						auto addr = data + amx->hea;
-						std::memcpy(addr, buf, len);
-						amx->hea += len;
-					}else{
-						value = reinterpret_cast<unsigned char*>(buf) - data;
-						if(value < 0 || value >= amx->stp)
+						auto addr = reinterpret_cast<cell*>(data + amx->hea);
+						amx::SetString(addr, str, len, true);
+						amx->hea += dlen;
+					}else if(i == 1 && lua_isfunction(L, i))
+					{
+						castresult = true;
+						continue;
+					}else if(auto buf = lua::tobuffer(L, i, len, isconst))
+					{
+						if(isconst)
 						{
-							if(addr_set.insert(value).second)
+							if(!amx::MemCheck(amx, len))
 							{
-								amx_guard.reset_addr.push_back(value);
+								return lua::amx_error(L, AMX_ERR_MEMORY);
+							}
+							value = amx->hea;
+							auto addr = data + amx->hea;
+							std::memcpy(addr, buf, len);
+							amx->hea += len;
+						}else{
+							value = reinterpret_cast<unsigned char*>(buf) - data;
+							if(value < 0 || value >= amx->stp)
+							{
+								if(addr_set.insert(value).second)
+								{
+									amx_guard.reset_addr.push_back(value);
+								}
 							}
 						}
-					}
-				}else if(lua_islightuserdata(L, i))
-				{
-					value = reinterpret_cast<cell>(lua_touserdata(L, i));
-				}else if(lua_istable(L, i))
-				{
-					lua_len(L, i);
-					int isnum;
-					auto len = lua_tointegerx(L, -1, &isnum);
-					lua_pop(L, 1);
-					if(!isnum || len < 0)
+					}else if(lua_islightuserdata(L, i))
 					{
-						return lua::argerror(L, i, "invalid table length");
-					}
-					
-					size_t clen = (size_t)(len + 1) * sizeof(cell);
-					if(!amx::MemCheck(amx, clen))
+						value = reinterpret_cast<cell>(lua_touserdata(L, i));
+					}else if(lua_istable(L, i))
 					{
-						return lua::amx_error(L, AMX_ERR_MEMORY);
-					}
-					auto addr = reinterpret_cast<cell*>(data + amx->hea);
-					if(!restorers)
-					{
-						restorers = std::unique_ptr<std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>>(new std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>());
-					}
-					auto &pair = (*restorers)[i];
-					pair.first = addr;
-					auto &rvector = pair.second;
-					for(int j = 1; j <= len; j++)
-					{
-						lua_pushinteger(L, j);
-						switch(lua_gettable(L, i))
-						{
-							case LUA_TNUMBER:
-								if(lua_isinteger(L, -1))
-								{
-									auto num = lua_tointeger(L, -1);
-									if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
-									{
-										return lua::argerror(L, i, "table index %d: %I cannot be stored in a single cell", j, num);
-									}
-									value = (cell)num;
-									rvector.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
-								}else{
-									float num = (float)lua_tonumber(L, i);
-									value = amx_ftoc(num);
-									rvector.push_back([](lua_State *L, cell value) { lua_pushnumber(L, amx_ctof(value)); });
-								}
-								break;
-							case LUA_TBOOLEAN:
-								value = lua_toboolean(L, -1);
-								rvector.push_back([](lua_State *L, cell value) { lua_pushboolean(L, value); });
-								break;
-							case LUA_TLIGHTUSERDATA:
-								value = reinterpret_cast<cell>(lua_touserdata(L, -1));
-								rvector.push_back([](lua_State *L, cell value) { lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
-								break;
-							default:
-								return lua::argerror(L, i, "table index %d: cannot marshal %s", j, luaL_typename(L, -1));
-						}
+						lua_len(L, i);
+						int isnum;
+						auto len = lua_tointegerx(L, -1, &isnum);
 						lua_pop(L, 1);
-						*(addr++) = value;
+						if(!isnum || len < 0)
+						{
+							return lua::argerror(L, i, "invalid table length");
+						}
+					
+						size_t clen = (size_t)(len + 1) * sizeof(cell);
+						if(!amx::MemCheck(amx, clen))
+						{
+							return lua::amx_error(L, AMX_ERR_MEMORY);
+						}
+						auto addr = reinterpret_cast<cell*>(data + amx->hea);
+						if(!restorers)
+						{
+							restorers = std::unique_ptr<std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>>(new std::unordered_map<int, std::pair<cell*, std::vector<void(*)(lua_State *L, cell value)>>>());
+						}
+						auto &pair = (*restorers)[i];
+						pair.first = addr;
+						auto &rvector = pair.second;
+						for(int j = 1; j <= len; j++)
+						{
+							lua_pushinteger(L, j);
+							switch(lua_gettable(L, i))
+							{
+								case LUA_TNUMBER:
+									if(lua_isinteger(L, -1))
+									{
+										auto num = lua_tointeger(L, -1);
+										if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+										{
+											return lua::argerror(L, i, "table index %d: %I cannot be stored in a single cell", j, num);
+										}
+										value = (cell)num;
+										rvector.push_back([](lua_State *L, cell value){ lua_pushinteger(L, value); });
+									}else{
+										float num = (float)lua_tonumber(L, i);
+										value = amx_ftoc(num);
+										rvector.push_back([](lua_State *L, cell value) { lua_pushnumber(L, amx_ctof(value)); });
+									}
+									break;
+								case LUA_TBOOLEAN:
+									value = lua_toboolean(L, -1);
+									rvector.push_back([](lua_State *L, cell value) { lua_pushboolean(L, value); });
+									break;
+								case LUA_TLIGHTUSERDATA:
+									value = reinterpret_cast<cell>(lua_touserdata(L, -1));
+									rvector.push_back([](lua_State *L, cell value) { lua_pushlightuserdata(L, reinterpret_cast<void*>(value)); });
+									break;
+								default:
+									return lua::argerror(L, i, "table index %d: cannot marshal %s", j, luaL_typename(L, -1));
+							}
+							lua_pop(L, 1);
+							*(addr++) = value;
+						}
+						*(addr++) = 0;
+						value = amx->hea;
+						amx->hea += clen;
+					}else{
+						if(lua_isnil(L, i) && paramcount == 0)
+						{
+							continue;
+						}
+						return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 					}
-					*(addr++) = 0;
-					value = amx->hea;
-					amx->hea += clen;
-				}else{
-					if(lua_isnil(L, i) && paramcount == 0)
-					{
-						continue;
-					}
-					return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 				}
 				
 				amx->stk -= sizeof(cell);
@@ -283,7 +294,7 @@ int __call(lua_State *L)
 	return 0;
 }
 
-int __call_fast(lua_State *L)
+static int __call_fast(lua_State *L)
 {
 	auto amx = reinterpret_cast<AMX*>(lua_touserdata(L, lua_upvalueindex(1)));
 	auto native = reinterpret_cast<AMX_NATIVE>(lua_touserdata(L, lua_upvalueindex(2)));
@@ -302,34 +313,22 @@ int __call_fast(lua_State *L)
 			{
 				cell value = 0;
 			
-				if(lua_isinteger(L, i))
+				if(!marshal_value_simple(L, i, value))
 				{
-					auto num = lua_tointeger(L, i);
-					if(num < std::numeric_limits<cell>::min() || num > std::numeric_limits<ucell>::max())
+					if(i == 1 && lua_isfunction(L, i))
 					{
-						return lua::argerror(L, i, "%I cannot be stored in a single cell", num);
-					}
-					value = (cell)num;
-				}else if(lua::isnumber(L, i))
-				{
-					float num = (float)lua_tonumber(L, i);
-					value = amx_ftoc(num);
-				}else if(lua_isboolean(L, i))
-				{
-					value = lua_toboolean(L, i);
-				}else if(i == 1 && lua_isfunction(L, i))
-				{
-					castresult = true;
-					continue;
-				}else if(lua_islightuserdata(L, i))
-				{
-					value = reinterpret_cast<cell>(lua_touserdata(L, i));
-				}else{
-					if(lua_isnil(L, i) && paramcount == 0)
-					{
+						castresult = true;
 						continue;
+					}else if(lua_islightuserdata(L, i))
+					{
+						value = reinterpret_cast<cell>(lua_touserdata(L, i));
+					}else{
+						if(lua_isnil(L, i) && paramcount == 0)
+						{
+							continue;
+						}
+						return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 					}
-					return lua::argerrortype(L, i, i == 1 ? "simple type or function" : "simple type");
 				}
 
 				*(--end) = value;
@@ -370,7 +369,7 @@ int __call_fast(lua_State *L)
 	return 0;
 }
 
-int getnative(lua_State *L)
+static int getnative(lua_State *L)
 {
 	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
 	auto name = luaL_checkstring(L, 1);
@@ -393,7 +392,7 @@ int getnative(lua_State *L)
 	return 1;
 }
 
-int native_index(lua_State *L)
+static int native_index(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_pushvalue(L, 2);
@@ -405,7 +404,7 @@ int native_index(lua_State *L)
 	return 1;
 }
 
-int nativeopts(lua_State *L)
+static int nativeopts(lua_State *L)
 {
 	if(!lua_isnoneornil(L, 1))
 	{
@@ -414,6 +413,36 @@ int nativeopts(lua_State *L)
 		lua_setupvalue(L, lua_upvalueindex(1), 2);
 	}
 	return 0;
+}
+
+static int marshal(lua_State *L)
+{
+	int paramcount = 0;
+	for(int i = lua_gettop(L); i >= 1; i--)
+	{
+		cell value = 0;
+			
+		if(!marshal_value_simple(L, i, value))
+		{
+			if(lua_islightuserdata(L, i))
+			{
+				paramcount++;
+				continue;
+			}else{
+				if(lua_isnil(L, i) && paramcount == 0)
+				{
+					continue;
+				}
+				return lua::argerrortype(L, i, "simple type");
+			}
+		}
+
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(value));
+		lua_replace(L, i);
+		paramcount++;
+	}
+	lua_settop(L, paramcount);
+	return paramcount;
 }
 
 void lua::interop::init_native(lua_State *L, AMX *amx)
@@ -445,6 +474,9 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 	lua_setfield(L, -2, "__index");
 	lua_setmetatable(L, -2);
 	lua_setfield(L, table, "native");
+
+	lua_pushcfunction(L, marshal);
+	lua_setfield(L, table, "marshal");
 }
 
 void lua::interop::amx_register_natives(AMX *amx, const AMX_NATIVE_INFO *nativelist, int number)
