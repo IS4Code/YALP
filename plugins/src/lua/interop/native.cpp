@@ -396,11 +396,23 @@ int native_index(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1));
 	lua_pushvalue(L, 2);
-	lua_call(L, 1, 1);
+	lua_pushvalue(L, lua_upvalueindex(2));
+	lua_call(L, 2, 1);
 	lua_pushvalue(L, 2);
 	lua_pushvalue(L, -2);
 	lua_settable(L, 1);
 	return 1;
+}
+
+int nativeopts(lua_State *L)
+{
+	if(!lua_isnoneornil(L, 1))
+	{
+		bool fast = lua::checkboolean(L, 1);
+		lua_pushboolean(L, fast);
+		lua_setupvalue(L, lua_upvalueindex(1), 2);
+	}
+	return 0;
 }
 
 void lua::interop::init_native(lua_State *L, AMX *amx)
@@ -424,7 +436,11 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 	lua_setupvalue(L, -2, 3);
 	lua_pushvalue(L, -1);
 	lua_setfield(L, table, "getnative");
-	lua_pushcclosure(L, native_index, 1);
+	lua_pushboolean(L, false);
+	lua_pushcclosure(L, native_index, 2);
+	lua_pushvalue(L, -1);
+	lua_pushcclosure(L, nativeopts, 1);
+	lua_setfield(L, table, "nativeopts");
 	lua_setfield(L, -2, "__index");
 	lua_setmetatable(L, -2);
 	lua_setfield(L, table, "native");
