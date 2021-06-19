@@ -15,9 +15,10 @@ static std::unordered_set<cell> addr_set;
 struct amx_native_info
 {
 	AMX *amx;
-	std::unordered_map<std::string, AMX_NATIVE> natives;
+	std::size_t native_batches;
+	std::unordered_map<std::string, std::pair<AMX_NATIVE, std::size_t>> natives;
 
-	amx_native_info(AMX *amx) : amx(amx)
+	amx_native_info(AMX *amx) : amx(amx), native_batches(0)
 	{
 
 	}
@@ -378,7 +379,7 @@ static int getnative(lua_State *L)
 	if(it != info->natives.end())
 	{
 		lua_pushlightuserdata(L, info->amx);
-		lua_pushlightuserdata(L, reinterpret_cast<void*>(it->second));
+		lua_pushlightuserdata(L, reinterpret_cast<void*>(it->second.first));
 		if(fast)
 		{
 			lua_pushcclosure(L, __call_fast, 2);
@@ -452,7 +453,7 @@ static int numnatives(lua_State *L)
 	return 1;
 }
 
-static int nativenames(lua_State *L)
+static int natives(lua_State *L)
 {
 	auto &info = lua::touserdata<std::shared_ptr<amx_native_info>>(L, lua_upvalueindex(1));
 	auto pair = std::make_pair(info->natives.begin(), info->natives.end());
@@ -472,10 +473,12 @@ static int nativenames(lua_State *L)
 			lua_pushnil(L);
 			return 1;
 		}
-		const auto &name = pair.first->first;
+		const auto &value = *pair.first;
+		const auto &name = value.first;
 		lua_pushlstring(L, name.data(), name.size());
+		lua_pushinteger(L, value.second.second);
 		++pair.first;
-		return 1;
+		return 2;
 	}, 1);
 	return 1;
 }
@@ -500,8 +503,8 @@ void lua::interop::init_native(lua_State *L, AMX *amx)
 	lua_setfield(L, table, "numnatives");
 
 	lua_pushvalue(L, -1);
-	lua_pushcclosure(L, nativenames, 1);
-	lua_setfield(L, table, "nativenames");
+	lua_pushcclosure(L, natives, 1);
+	lua_setfield(L, table, "natives");
 
 	lua_getfield(L, table, "sleep");
 	lua_pushnil(L);
@@ -531,10 +534,12 @@ void lua::interop::amx_register_natives(AMX *amx, const AMX_NATIVE_INFO *nativel
 		it = amx_map.insert(std::make_pair(amx, std::make_shared<amx_native_info>(amx))).first;
 	}
 	auto &info = *it->second;
+	auto batch = info.native_batches;
 	for(int i = 0; nativelist[i].name != nullptr && (i < number || number == -1); i++)
 	{
-		info.natives.insert(std::make_pair(nativelist[i].name, nativelist[i].func));
+		info.natives.emplace(std::piecewise_construct, std::forward_as_tuple(nativelist[i].name), std::forward_as_tuple(nativelist[i].func, batch));
 	}
+	++info.native_batches;
 }
 
 bool lua::interop::amx_get_param_addr(AMX *amx, cell amx_addr, cell **phys_addr)
@@ -571,5 +576,5 @@ AMX_NATIVE lua::interop::find_native(AMX *amx, const char *native)
 	{
 		return nullptr;
 	}
-	return it2->second;
+	return it2->second.first;
 }
