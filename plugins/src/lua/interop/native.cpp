@@ -333,6 +333,7 @@ int __call_fast(lua_State *L)
 				}
 
 				*(--end) = value;
+				paramcount++;
 			}
 
 			*(--end) = paramcount * sizeof(cell);
