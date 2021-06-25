@@ -356,7 +356,8 @@ static int map_cont(lua_State *L, int status, lua_KContext ctx)
 		lua_pushvalue(L, 1);
 		lua_rotate(L, next, -1);
 		int top = lua_gettop(L) - 2;
-		lua_callk(L, 1, LUA_MULTRET, (next << 8) | top, map_cont);
+		lua_pushinteger(L, next - 1);
+		lua_callk(L, 2, LUA_MULTRET, (next << 8) | top, map_cont);
 		numret = lua_gettop(L) - top;
 	}
 	return lua_gettop(L) - 1;
