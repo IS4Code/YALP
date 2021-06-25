@@ -402,5 +402,27 @@ int lua::timer::loader(lua_State *L)
 	lua_pushcfunction(L, timeout);
 	lua_setfield(L, table, "timeout");
 
+	lua::loadbufferx(L, R"END(
+local timer = ...
+function timer.new(func, scheduler, ...)
+  local elapsed = false
+  local cancelled = false
+  return {
+    elapsed = function() return elapsed end,
+    cancelled = function() return cancelled end,
+    cancel = function() cancelled = true end
+  }, scheduler(
+    function(...)
+      elapsed = true
+      if not cancelled then
+        return func(...)
+      end
+    end, ...
+  )
+end
+)END", "='timer'", nullptr);
+	lua_pushvalue(L, table);
+	lua_call(L, 1, 0);
+
 	return 1;
 }
