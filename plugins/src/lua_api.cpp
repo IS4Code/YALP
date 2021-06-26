@@ -449,20 +449,21 @@ static int open_package(lua_State *L)
 static int open_base(lua_State *L)
 {
 	luaopen_base(L);
+	int table = lua_absindex(L, -1);
 
 	lua::pushliteral(L, "YALP 1.0");
-	lua_setfield(L, -2, "YALP_VERSION");
+	lua_setfield(L, table, "YALP_VERSION");
 
 	lua_pushcfunction(L, custom_print);
-	lua_setfield(L, -2, "print");
+	lua_setfield(L, table, "print");
 	lua_pushcfunction(L, take);
-	lua_setfield(L, -2, "take");
+	lua_setfield(L, table, "take");
 	lua_pushcfunction(L, bind);
-	lua_setfield(L, -2, "bind");
+	lua_setfield(L, table, "bind");
 	lua_pushcfunction(L, async);
-	lua_setfield(L, -2, "async");
+	lua_setfield(L, table, "async");
 	lua_pushcfunction(L, import);
-	lua_setfield(L, -2, "import");
+	lua_setfield(L, table, "import");
 
 	lua_createtable(L, 0, LUA_NUMTAGS + 2);
 	for(int i = 0; i < LUA_NUMTAGS; i++)
@@ -476,22 +477,34 @@ static int open_base(lua_State *L)
 	lua_setfield(L, -2, "float");
 
 	lua_pushcclosure(L, argcheck, 1);
-	lua_setfield(L, -2, "argcheck");
+	lua_setfield(L, table, "argcheck");
 
 	lua_pushcfunction(L, optcheck);
-	lua_setfield(L, -2, "optcheck");
+	lua_setfield(L, table, "optcheck");
 
 	lua_pushcfunction(L, map);
-	lua_setfield(L, -2, "map");
+	lua_setfield(L, table, "map");
 
 	lua_pushcfunction(L, concat);
-	lua_setfield(L, -2, "concat");
+	lua_setfield(L, table, "concat");
 
 	lua_pushcfunction(L, exit);
-	lua_setfield(L, -2, "exit");
+	lua_setfield(L, table, "exit");
 
 	lua_pushcfunction(L, array);
-	lua_setfield(L, -2, "array");
+	lua_setfield(L, table, "array");
+
+	lua::loadbufferx(L, R"END(
+local _ENV = ...
+local m = map
+function apply(t, ...)
+  return m(function(v, i)
+    return t[i](v)
+  end, ...)
+end
+)END", "='_G'", nullptr);
+	lua_pushvalue(L, table);
+	lua_call(L, 1, 0);
 
 	open_package(L);
 	lua_pop(L, 1);
