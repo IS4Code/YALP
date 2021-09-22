@@ -318,11 +318,13 @@ static int timeout(lua_State *L)
 		}
 		lua_xmove(L, lthread, nargs);
 		int status = lua_resume(lthread, L, nargs);
-		std::lock_guard<std::mutex> lock(info->hook_mutex);
-		info->ended = true;
-		if(lua_gethook(lthread) == timeout_hook)
 		{
-			lua_sethook(lthread, nullptr, 0, 0);
+			std::lock_guard<std::mutex> lock(info->hook_mutex);
+			info->ended = true;
+			if(lua_gethook(lthread) == timeout_hook)
+			{
+				lua_sethook(lthread, nullptr, 0, 0);
+			}
 		}
 		switch(status)
 		{
@@ -339,11 +341,13 @@ static int timeout(lua_State *L)
 	}else{
 		return lua::pcallk(L, lua_gettop(L) - 1, lua::numresults(L), 0, [=](lua_State *L, int status)
 		{
-			std::lock_guard<std::mutex> lock(info->hook_mutex);
-			info->ended = true;
-			if(lua_gethook(L) == timeout_hook)
 			{
-				lua_sethook(L, nullptr, 0, 0);
+				std::lock_guard<std::mutex> lock(info->hook_mutex);
+				info->ended = true;
+				if(lua_gethook(L) == timeout_hook)
+				{
+					lua_sethook(L, nullptr, 0, 0);
+				}
 			}
 			switch(status)
 			{
