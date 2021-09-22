@@ -67,6 +67,7 @@ static cell AMX_NATIVE_CALL n_lua_dostring(AMX *amx, cell *params)
 
 	char *str;
 	amx_StrParam(amx, params[2], str);
+	if(!str) str = "";
 		
 	return luaL_dostring(L, str);
 }
@@ -394,6 +395,7 @@ static cell AMX_NATIVE_CALL n_lua_getfield(AMX *amx, cell *params)
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[3], name);
+	if(!name) name = "";
 
 	switch(lua::pgetfield(L, params[2], name))
 	{
@@ -419,6 +421,7 @@ static cell AMX_NATIVE_CALL n_lua_getglobal(AMX *amx, cell *params)
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[2], name);
+	if(!name) name = "";
 
 	lua_pushglobaltable(L);
 	switch(lua::pgetfield(L, -1, name))
@@ -468,6 +471,7 @@ static cell AMX_NATIVE_CALL n_lua_setfield(AMX *amx, cell *params)
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[3], name);
+	if(!name) name = "";
 	
 	switch(lua::psetfield(L, params[2], name))
 	{
@@ -493,6 +497,7 @@ static cell AMX_NATIVE_CALL n_lua_setglobal(AMX *amx, cell *params)
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *name;
 	amx_StrParam(amx, params[2], name);
+	if(!name) name = "";
 
 	lua_pushglobaltable(L);
 	lua_insert(L, -2);
@@ -547,6 +552,7 @@ static cell AMX_NATIVE_CALL n_lua_pushstring(AMX *amx, cell *params)
 	auto L = reinterpret_cast<lua_State*>(params[1]);
 	char *str;
 	amx_StrParam(amx, params[2], str);
+	if(!str) str = "";
 
 	lua_pushstring(L, str);
 	return 1;
@@ -801,6 +807,7 @@ static cell AMX_NATIVE_CALL n_lua_loadstream(AMX *amx, cell *params)
 
 	const char *chunkname;
 	amx_StrParam(amx, params[3], chunkname);
+	if(!chunkname) chunkname = "";
 
 	const char *mode = nullptr;
 	cell modecell = optparam(4, 3);
@@ -942,6 +949,7 @@ static cell AMX_NATIVE_CALL n_lua_loader(AMX *amx, cell *params)
 
 	const char *chunkname;
 	amx_StrParam(amx, params[2], chunkname);
+	if(!chunkname) chunkname = "";
 
 	const char *mode = nullptr;
 	cell modecell = optparam(3, 3);
