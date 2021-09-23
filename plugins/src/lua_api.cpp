@@ -451,7 +451,7 @@ static int open_base(lua_State *L)
 	luaopen_base(L);
 	int table = lua_absindex(L, -1);
 
-	lua::pushliteral(L, "YALP 1.0");
+	lua::pushliteral(L, "YALP 1.1.1");
 	lua_setfield(L, table, "YALP_VERSION");
 
 	lua_pushcfunction(L, custom_print);
