@@ -34,21 +34,15 @@ static cell AMX_NATIVE_CALL n_lua_newstate(AMX *amx, cell *params)
 			auto oldalloc = lua_getallocf(L, &ud);
 			lua::setallocf(L, [=](void *ptr, size_t osize, size_t nsize) mutable
 			{
-				if(total + nsize > memlimit)
+				size_t osize_real = ptr == nullptr ? 0 : osize;
+				if(total - osize_real + nsize > memlimit)
 				{
-					if(ptr == nullptr || nsize > osize)
-					{
-						return static_cast<void*>(nullptr);
-					}
+					return static_cast<void*>(nullptr);
 				}
 				void *ret = oldalloc(ud, ptr, osize, nsize);
-				if(ret)
+				if(ret || nsize == 0)
 				{
-					if(ptr != nullptr)
-					{
-						total -= osize;
-					}
-					total += nsize;
+					total = total - osize_real + nsize;
 				}
 				return ret;
 			});
