@@ -23,7 +23,7 @@ struct lua_ref_info
 
 	}
 
-	bool marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy = false);
+	bool marshal(lua_State *from, lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy = false);
 
 	bool gettable()
 	{
@@ -116,7 +116,7 @@ struct lua_foreign_reference
 	{
 		if(auto remote = connect(from))
 		{
-			return remote->marshal(to, marshaller, noproxy);
+			return remote->marshal(from, to, marshaller, noproxy);
 		}
 		return false;
 	}
@@ -126,13 +126,13 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int indexable = lua_absindex(L2, -1);
 
 			lua_pushvalue(L, 2);
-			source->marshal(L2, remote);
+			source->marshal(L, L2, remote);
 			int err = lua::pgettable(L2, indexable);
-			remote->marshal(L, source);
+			remote->marshal(L2, L, source);
 
 			lua_remove(L2, indexable);
 
@@ -150,20 +150,20 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int indexable = lua_absindex(L2, -1);
 
 			lua_pushvalue(L, 2);
-			source->marshal(L2, remote);
+			source->marshal(L, L2, remote);
 			lua_pushvalue(L, 3);
-			source->marshal(L2, remote);
+			source->marshal(L, L2, remote);
 			int err = lua::psettable(L2, indexable);
 
 			lua_remove(L2, indexable);
 
 			if(err != LUA_OK)
 			{
-				remote->marshal(L, source);
+				remote->marshal(L2, L, source);
 				return lua::error(L);
 			}
 			return 0;
@@ -178,7 +178,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int callable = lua_absindex(L2, -1);
 			int top = lua_gettop(L2) - 1;
 
@@ -190,12 +190,12 @@ struct lua_foreign_reference
 			for(int i = 2; i <= args; i++)
 			{
 				lua_pushvalue(L, i);
-				source->marshal(L2, remote);
+				source->marshal(L, L2, remote);
 			}
 
 			if(lua_pcall(L2, args - 1, numresults, 0) != LUA_OK)
 			{
-				remote->marshal(L, source);
+				remote->marshal(L2, L, source);
 				return lua::error(L);
 			}
 
@@ -209,7 +209,7 @@ struct lua_foreign_reference
 			for(int i = 1; i <= numresults; i++)
 			{
 				lua_pushvalue(L2, top + i);
-				remote->marshal(L, source);
+				remote->marshal(L2, L, source);
 			}
 
 			if(L != L2)
@@ -227,11 +227,11 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int obj = lua_absindex(L2, -1);
 
 			int err = lua::plen(L2, obj);
-			remote->marshal(L, source);
+			remote->marshal(L2, L, source);
 
 			lua_remove(L2, obj);
 
@@ -250,7 +250,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{
@@ -260,7 +260,7 @@ struct lua_foreign_reference
 			if(idx == 2)
 			{
 				lua_pop(L, 1);
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_pop(L2, 1);
 					if(Op == LUA_OPEQ)
@@ -272,7 +272,7 @@ struct lua_foreign_reference
 				}
 				err = lua::pcompare(L2, -1, -2, Op);
 			}else{
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_pop(L2, 1);
 					if(Op == LUA_OPEQ)
@@ -284,7 +284,7 @@ struct lua_foreign_reference
 				}
 				err = lua::pcompare(L2, -2, -1, Op);
 			}
-			remote->marshal(L, source);
+			remote->marshal(L2, L, source);
 
 			if(L2 != L)
 			{
@@ -311,7 +311,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{
@@ -321,7 +321,7 @@ struct lua_foreign_reference
 			for(int i = 1; i < idx; i++)
 			{
 				lua_pushvalue(L, i);
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_settop(L2, obj - 1);
 					return luaL_argerror(L, i, "requires creating a proxy");
@@ -331,7 +331,7 @@ struct lua_foreign_reference
 			for(int i = idx + 1; i <= top; i++)
 			{
 				lua_pushvalue(L, i);
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_settop(L2, obj - 1);
 					return luaL_argerror(L, i, "requires creating a proxy");
@@ -339,7 +339,7 @@ struct lua_foreign_reference
 			}
 
 			int err = lua::parith(L2, Op);
-			remote->marshal(L, source);
+			remote->marshal(L2, L, source);
 
 			if(err != LUA_OK)
 			{
@@ -355,7 +355,7 @@ struct lua_foreign_reference
 		if(auto remote = connect(L))
 		{
 			auto L2 = remote->L;
-			lua::stackguard guard(L2);
+			lua::stackguard guard(L2, -1);
 			int top = lua_gettop(L);
 			if(!lua_checkstack(L2, top + 4))
 			{
@@ -365,7 +365,7 @@ struct lua_foreign_reference
 			for(int i = 1; i < idx; i++)
 			{
 				lua_pushvalue(L, i);
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_settop(L2, obj - 1);
 					return luaL_argerror(L, i, "requires creating a proxy");
@@ -375,7 +375,7 @@ struct lua_foreign_reference
 			for(int i = idx + 1; i <= top; i++)
 			{
 				lua_pushvalue(L, i);
-				if(!source->marshal(L2, remote, true))
+				if(!source->marshal(L, L2, remote, true))
 				{
 					lua_settop(L2, obj - 1);
 					return luaL_argerror(L, i, "requires creating a proxy");
@@ -383,7 +383,7 @@ struct lua_foreign_reference
 			}
 			
 			int err = lua::pconcat(L2, top);
-			remote->marshal(L, source);
+			remote->marshal(L2, L, source);
 
 			if(err != LUA_OK)
 			{
@@ -485,72 +485,72 @@ namespace lua
 	};
 }
 
-bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy)
+bool lua_ref_info::marshal(lua_State *from, lua_State *to, const std::shared_ptr<lua_ref_info> &marshaller, bool noproxy)
 {
-	if(L == to)
+	if(from == to)
 	{
 		return true;
 	}
-	if(L == lua::mainthread(to))
+	if(lua::mainthread(from) == lua::mainthread(to))
 	{
-		lua_xmove(L, to, 1);
+		lua_xmove(from, to, 1);
 		return true;
 	}
-	if(lua_rawgeti(L, LUA_REGISTRYINDEX, ptrtable) != LUA_TTABLE)
+	if(lua_rawgeti(from, LUA_REGISTRYINDEX, ptrtable) != LUA_TTABLE)
 	{
-		lua_pop(L, 1);
+		lua_pop(from, 1);
 		return false;
 	}
-	lua_insert(L, -2);
-	int t = lua_absindex(L, -2);
-	int top = lua_absindex(L, -1);
-	switch(lua_type(L, top))
+	lua_insert(from, -2);
+	int t = lua_absindex(from, -2);
+	int top = lua_absindex(from, -1);
+	switch(lua_type(from, top))
 	{
 		case LUA_TSTRING:
 		{
 			size_t len;
-			auto str = lua_tolstring(L, top, &len);
+			auto str = lua_tolstring(from, top, &len);
 			lua_pushlstring(to, str, len);
-			lua_remove(L, top);
+			lua_remove(from, top);
 			break;
 		}
 		case LUA_TNUMBER:
 		{
-			if(lua_isinteger(L, top))
+			if(lua_isinteger(from, top))
 			{
-				lua_pushinteger(to, lua_tointeger(L, top));
+				lua_pushinteger(to, lua_tointeger(from, top));
 			}else{
-				lua_pushnumber(to, lua_tonumber(L, top));
+				lua_pushnumber(to, lua_tonumber(from, top));
 			}
-			lua_remove(L, top);
+			lua_remove(from, top);
 			break;
 		}
 		case LUA_TNIL:
 		{
 			lua_pushnil(to);
-			lua_remove(L, top);
+			lua_remove(from, top);
 			break;
 		}
 		case LUA_TLIGHTUSERDATA:
 		{
-			lua_pushlightuserdata(to, lua_touserdata(L, top));
-			lua_remove(L, top);
+			lua_pushlightuserdata(to, lua_touserdata(from, top));
+			lua_remove(from, top);
 			break;
 		}
 		case LUA_TBOOLEAN:
 		{
-			lua_pushboolean(to, lua_toboolean(L, top));
-			lua_remove(L, top);
+			lua_pushboolean(to, lua_toboolean(from, top));
+			lua_remove(from, top);
 			break;
 		}
 		case LUA_TUSERDATA:
 		{
-			if(isproxy(L, top))
+			if(isproxy(from, top))
 			{
-				auto &ref = lua::touserdata<lua_foreign_reference>(L, top);
-				if(ref.duplicate(to, marshaller, noproxy, L))
+				auto &ref = lua::touserdata<lua_foreign_reference>(from, top);
+				if(ref.duplicate(to, marshaller, noproxy, from))
 				{
-					lua_remove(L, top);
+					lua_remove(from, top);
 					break;
 				}
 			}
@@ -560,10 +560,10 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 		{
 			if(noproxy)
 			{
-				lua_remove(L, t);
+				lua_remove(from, t);
 				return false;
 			}
-			int obj = luaL_ref(L, t);
+			int obj = luaL_ref(from, t);
 			auto &ref = lua::newuserdata<lua_foreign_reference>(to);
 			ref.obj = obj;
 			ref.source = marshaller;
@@ -571,7 +571,7 @@ bool lua_ref_info::marshal(lua_State *to, const std::shared_ptr<lua_ref_info> &m
 			break;
 		}
 	}
-	lua_remove(L, t);
+	lua_remove(from, t);
 	return true;
 }
 
@@ -628,7 +628,7 @@ int get(lua_State *L)
 				int table = lua_absindex(L2, -1);
 
 				lua_rawgetp(L2, -1, ptr);
-				obj->marshal(L, lua::touserdata<std::shared_ptr<lua_ref_info>>(L, lua_upvalueindex(1)));
+				obj->marshal(L2, L, lua::touserdata<std::shared_ptr<lua_ref_info>>(L, lua_upvalueindex(1)));
 
 				if(remove)
 				{

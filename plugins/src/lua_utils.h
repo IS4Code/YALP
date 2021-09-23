@@ -209,7 +209,7 @@ namespace lua
 		int top;
 
 	public:
-		stackguard(lua_State *L);
+		stackguard(lua_State *L, int off=0);
 		~stackguard();
 	};
 

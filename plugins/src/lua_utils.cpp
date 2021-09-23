@@ -383,7 +383,7 @@ int lua::error(lua_State *L)
 	return lua_error(L);
 }
 
-lua::stackguard::stackguard(lua_State *L) : L(L), top(lua_gettop(L))
+lua::stackguard::stackguard(lua_State *L, int off) : L(L), top(lua_gettop(L) + off)
 {
 
 }
