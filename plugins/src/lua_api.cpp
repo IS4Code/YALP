@@ -339,7 +339,8 @@ static int optcheck(lua_State *L)
 static int map_cont(lua_State *L, int status, lua_KContext ctx)
 {
 	int numret = lua_gettop(L) - (ctx & 0xFF);
-	int next = (ctx & ~0xFF) >> 8;
+	int next = (ctx & 0xFFFF00) >> 8;
+	int pos = (ctx >> 24) & 0xFF;
 	while(next <= lua_gettop(L))
 	{
 		if(next == 1)
@@ -356,8 +357,9 @@ static int map_cont(lua_State *L, int status, lua_KContext ctx)
 		lua_pushvalue(L, 1);
 		lua_rotate(L, next, -1);
 		int top = lua_gettop(L) - 2;
-		lua_pushinteger(L, next - 1);
-		lua_callk(L, 2, LUA_MULTRET, (next << 8) | top, map_cont);
+		lua_pushinteger(L, pos);
+		pos++;
+		lua_callk(L, 2, LUA_MULTRET, (pos << 24) | (next << 8) | top, map_cont);
 		numret = lua_gettop(L) - top;
 	}
 	return lua_gettop(L) - 1;
@@ -366,7 +368,7 @@ static int map_cont(lua_State *L, int status, lua_KContext ctx)
 static int map(lua_State *L)
 {
 	luaL_checktype(L, 1, LUA_TFUNCTION);
-	return map_cont(L, LUA_OK, 1 << 8);
+	return map_cont(L, LUA_OK, (1 << 8) | (1 << 24));
 }
 
 static int concat(lua_State *L)
